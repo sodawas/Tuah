@@ -1,6 +1,14 @@
 {
     "8049721378": {
-        "expires": 1999999999,
-        "reason": "Trying to tamper with our Scripts"
+        "expires": "permanent",
+        "reason": "bye bye"
+    },
+    "0": {
+        "expires": 24 * 3600,  // 24 Stunden Ban
+        "reason": "Abuse"
+    },
+    "0": {
+        "expires": 7 * 86400,  // 7 Tage Ban
+        "reason": "Exploiting"
     }
 }
