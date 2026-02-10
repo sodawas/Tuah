@@ -1,14 +1,14 @@
 {
     "8049721378": {
-        "expires": "permanent",
+        "expires": "PERMA",
         "reason": "bye bye"
     },
-    "0": {
+    "111111111": {
         "expires": 1707615600,
-        "reason": "test"
+        "reason": "Test 24h Ban"
     },
-    "0": {
+    "222222222": {
         "expires": 1708190400,
-        "reason": "test"
+        "reason": "Test 7 Tage Ban"
     }
 }
