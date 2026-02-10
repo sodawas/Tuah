@@ -4,11 +4,11 @@
         "reason": "bye bye"
     },
     "0": {
-        "expires": 24 * 3600,  // 24 Stunden Ban
+        "expires": 24 * 3600, 
         "reason": "Abuse"
     },
     "0": {
-        "expires": 7 * 86400,  // 7 Tage Ban
+        "expires": 7 * 86400,  
         "reason": "Exploiting"
     }
 }
