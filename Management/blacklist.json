@@ -4,11 +4,11 @@
         "reason": "bye bye"
     },
     "0": {
-        "expires": 24 * 3600, 
-        "reason": "Abuse"
+        "expires": 1707615600,
+        "reason": "test"
     },
     "0": {
-        "expires": 7 * 86400,  
-        "reason": "Exploiting"
+        "expires": 1708190400,
+        "reason": "test"
     }
 }
