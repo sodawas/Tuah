@@ -1,10 +1,6 @@
 {
     "8049721378": {
-        "expires": 1999999999,
-        "reason": "testing"
-    },
-    "1234567890": {
-        "expires": 9999999999,
-        "reason": "permanent"
+        "expires": 1,
+        "reason": "Trying to tamper with our Scripts"
     }
 }
