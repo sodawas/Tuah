@@ -878,7 +878,7 @@ local AutoLoad = Sections.UI_Controls:CreateToggle({
             local queue = queue_on_teleport or syn.queue_on_teleport
 
             if queue then
-                queue('loadstring(game:HttpGet("URL"))()')
+                queue('loadstring(game:HttpGet("https://raw.githubusercontent.com/sodawas/Tuah/refs/heads/main/Games/2840520567012685"))()')
             end;
         end;
     end;
