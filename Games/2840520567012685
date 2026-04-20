@@ -1,1 +1,3058 @@
-loadstring(game:HttpGet("https://pastebin.com/raw/LEBH3Mcz"))()
+--(( Global 
+
+Bizzare, Lineage = {}, {};
+Data, Git = {}, "https://raw.githubusercontent.com/sodawas/Data/refs/heads/main/23456234635673457";
+Place_Id = {14890802310, 74747090658891};
+Discord_Invite = "https://discord.gg/pzFatJqn";
+Blacklist = {};
+Devs = {
+    ["8049721378"] = true; -- @samirokokokok
+}
+
+
+--(( Variables 
+
+local cloneref = cloneref or function(x) return x; end;
+local players = cloneref(game:GetService("Players"));
+local replicatedstorage = cloneref(game:GetService("ReplicatedStorage"));
+local runservice = cloneref(game:GetService("RunService"));
+local httpservice = cloneref(game:GetService("HttpService"));
+local StarterPack = game:GetService("StarterPack")
+local tweenservice = cloneref(game:GetService("TweenService"));
+local teleportservice = cloneref(game:GetService("TeleportService"));
+local uis = cloneref(game:GetService("UserInputService"));
+local vim = cloneref(game:GetService("VirtualInputManager"));
+local client = players.LocalPlayer;
+local character;
+local humanoid;
+local humanoidrootpart;
+
+local function setup_character(char)
+    character = cloneref(char);
+    humanoid = cloneref(char:WaitForChild("Humanoid"));
+    humanoidrootpart = cloneref(char:WaitForChild("HumanoidRootPart"));
+end;
+
+if client.Character then
+    setup_character(client.Character);
+end;
+client.CharacterAdded:Connect(setup_character);
+
+
+--(( Game Variables
+
+local alive = workspace.Live;
+local npcs = workspace.Npcs;
+local retry_remote = replicatedstorage:WaitForChild("requests"):WaitForChild("character"):WaitForChild("retryraid");
+local get_data_remote = replicatedstorage:WaitForChild("requests"):WaitForChild("miscellaneous"):WaitForChild("get_data");
+local use_item_remote = replicatedstorage:WaitForChild("requests"):WaitForChild("character"):WaitForChild("use_item");
+local camera = workspace.CurrentCamera;
+
+--(( Game Tables
+
+set = {};
+config = {
+    FARM = {
+        mobs = {
+            "Boxer";
+            "CorruptPoliceOfficer";
+            "Samurai";
+            "SamuraiMaster";
+            "Thief";
+            "Yakuza";
+            "EliteMafiaMember";
+            "EliteVampire";
+            "Vampire";
+            "Delinquent";
+            "OkuyasuNijimura";
+            "Toyohiro";
+            "MafiaMember";
+            "ZombieGrunt";
+            "JosukeHigashikata";
+            "YoshikageKira";
+            "RockHuman";
+            "Miyamoto Musashi";
+            "Rogue Rock Human";
+            "Cyborg";
+            "ElderVampire";
+            "SpeedwagonAgent";
+            "ZombieCyborg";
+            "NightVampire";
+            "SpinUser";
+            "HamonApprentice";
+            "HamonMaster";
+        };
+        bosses = {
+            "Akira Otoishi";
+            "Yoshikage Kira";
+            "Okuyasu Nijimura PRIME";
+            "Miyamoto Musashi";
+            "Zombie Rudol von Stroheim";
+            "Dr. Bosconovitch";
+            "Muhammad Avdol";
+            "Polnareff";
+        };
+        teleport = { mode = "Behind"; offset = 5; },
+        abilities = {
+            map = {
+                E = 1;
+                R = 2;
+                Z = 3;
+                X = 4;
+                C = 5;
+                V = 6;
+            };
+            selected = {};
+        };
+        selected_mobs = {};
+        selected_boss = nil;
+    };
+    ITEMS = {
+        available = {
+            "arrow";
+            "mask";
+            "diary";
+        };
+        cache = {};
+    };
+    RAID = {
+        bosses = {
+            "Muhammad Avdol";
+            "Jotaro Kujo";
+            "DIO";
+            "Yoshikage Kira Bites The Dust";
+            "Death 13";
+            "The World Over Heaven";
+        };
+        selected = nil;
+        farm_distance = 8; 
+        auto_skills = {  
+            ["E"] = true, ["R"] = true, ["Z"] = true,
+            ["X"] = false, ["C"] = false, ["V"] = false,
+        };
+    };
+    STAND = {
+        stands = {
+            "Crazy Diamond", "Cream", "Gold Experience", "Killer Queen", "King Crimson",
+            "Magicians Red", "Purple Haze", "Red Hot Chili Pepper", "Silver Chariot", "Stone Free", "Weather Report", "White Snake", "The World", "Star Platinum"
+        };
+        trait_rarity = {"Mythical", "Legendary", "Rare", "Uncommon", "Common"};
+        trait_names = {
+            "Elegant (Mythic)", "Feral (Mythic)", "Transcendent (Mythic)",
+            "Methodical (Legendary)", "Dominant (Legendary)", "Cursed (Legendary)",
+            "Rhythmic (Legendary)", "Artistic (Legendary)", "Suffocating (Legendary)",
+            "Determined (Rare)", "Compassionate (Rare)", "Furious (Rare)", "Slugger (Rare)",
+            "Fearful (Rare)", "Durable (Rare)",
+            "Curious (Uncommon)", "Astute (Uncommon)", "Predictive (Uncommon)", "Kind (Uncommon)",
+            "Erratic (Common)", "Energetic (Common)", "Cowardly (Common)", "Happy (Common)",
+            "Firm (Common)", "Arrogant (Common)"
+        };
+        skin_rarity = {"Mythical", "Legendary"};
+        selected_stands = {};
+        selected_trait_rarity = {};
+        selected_trait_names = {};
+        selected_skin_rarity = {};
+        stat_combo = {};    
+        stat_mode = "Any";    
+        config_mode = "Any";
+        enabled = false;
+    };
+    WEBHOOK = {
+        enabled = false,
+        url = "",
+        username = "Lotus Notifier",
+        avatar = "https://cdn.discordapp.com/attachments/1366697900976902164/1495315953842524180/image-removebg-preview.png?ex=69e675c1&is=69e52441&hm=d1313330e34745d69511e96c8c92af40a294ad6a182d92d2324a7a55c892afa2&",
+        stand = true,
+        raid = true,
+        misc = true,
+    },  
+    CODES = {
+        "Delay1",
+        "Delay2",
+        "Delay3",
+        "Update1",
+        "BizarreLineage1",
+        "LikeTheGameForMore1",
+        "FavoriteTheGame1",
+        "Update2=2027",
+        "250kLikes",
+        "500kLikes",
+        "750LikesforNextCode"
+    };
+    CACHE = {
+        mobs = {};
+    };
+};
+
+
+--(( Functions
+
+function Bizzare:Load()
+    repeat task.wait() until game:IsLoaded();
+end; 
+-- Bizzare:Load();
+
+function Bizzare:Entry()
+    if typeof(Bizzare) == "table" and table.find(Place_Id, game.PlaceId) and self:Data() then 
+        print(" -- Check Successful -- " .. " | " .. tostring(os.date()));
+        task.spawn(pcall, function()
+            repeat task.wait() until replicatedstorage:FindFirstChild("requests")
+            replicatedstorage.requests.character.spawn:FireServer()
+        end)
+        local main_menu = client.PlayerGui:WaitForChild("Main Menu", 10)
+        if main_menu then 
+        main_menu.Enabled = false;
+        end;
+    else
+        print(" -- Check Failed -- ");
+    end;
+end;
+
+function Bizzare:Data()
+    local success, response = pcall(function()
+        return request({ Url = Git, Method = "GET" })
+    end)
+
+    if (not success) or not response or response.StatusCode ~= 200 then
+        self:ClientKick("HTTPGET: Response Failed")
+        return false;
+    end;
+
+    local body = response.Body;
+    local parsed, env = pcall(function()
+        local chunk = loadstring("return " .. body);
+        return chunk()
+    end);
+
+    if not parsed or not env then
+        self:ClientKick("HTTPGET: Parse Failed")
+        return false;
+    end;
+
+    if env.BUILD ~= "Testing" and env.BUILD ~= "Online" then
+        self:ClientKick("Lotus is currently not available, for more Information check our Discord!")
+        return false;
+    end;
+    return true;
+end;
+
+function Bizzare:ClientKick(msg)
+    local kick = 0;
+    msg = msg or "//";
+
+    if typeof(msg) == "string" then
+        return client:Kick(msg);
+    end;
+end;
+
+function Bizzare:Build()
+    local success, response = pcall(function()
+        return request({
+            Url = Git,
+            Method = "GET"
+        })
+    end)
+
+    if not success or not response or response.StatusCode ~= 200 then
+        return "Unknown"
+    end;
+
+    local body = tostring(response.Body or "");
+
+    if string.find(body, "Down") then
+        return "Unknown"
+    end;
+
+    return "Updated";
+end;
+
+function Bizzare:IsDev()
+    return Devs[tostring(players.LocalPlayer.UserId)] == true;
+end;
+
+function Bizzare:ProcessBlacklistTimes()
+    for userId, entry in pairs(Blacklist) do
+        local exp = entry.expires;
+
+        if type(exp) == "string" then
+            exp = exp:upper()
+
+            if exp == "PERMA" then
+                Blacklist[userId].expires = "PERMA"
+            elseif exp:find("H") then
+                local hours = tonumber(exp:match("(%d+)H")) or 0;
+                Blacklist[userId].expires = os.time() + hours * 3600;
+            elseif exp:find("D") then
+                local days = tonumber(exp:match("(%d+)D")) or 0;
+                Blacklist[userId].expires = os.time() + days * 86400;
+            end;
+        end;
+    end;
+end;
+
+function Bizzare:LoadBlacklist()
+    local ok, res = pcall(function()
+        return request({
+            Url = "https://raw.githubusercontent.com/sodawas/Tuah/refs/heads/main/Management/blacklist.json",
+            Method = "GET";
+        });
+    end);
+
+    if not ok or not res or res.StatusCode ~= 200 then
+        warn("blacklist request failed;");
+        return;
+    end;
+
+    local data;
+    local success, err = pcall(function()
+        data = httpservice:JSONDecode(res.Body);
+    end);
+
+    if not success or typeof(data) ~= "table" then
+        warn("blacklist JSON decode failed;", err);
+        return;
+    end;
+    Blacklist = data;
+end;
+
+function Bizzare:CheckBlacklist()
+    local userId = tostring(players.LocalPlayer.UserId);
+    local entry = Blacklist[userId];
+
+    if not entry then return; end;
+    if Bizzare:IsDev() then return; end;
+
+    local currentTime = os.time();
+    local expires = entry.expires;
+
+    if expires == "PERMA" then
+        Bizzare:ClientKick(
+            "You have been permanently Blacklisted from using our Services\n" ..
+            "Reason: " .. tostring(entry.reason) .. "\n"
+        );
+        return;
+    end;
+
+    if type(expires) == "number" then
+        if currentTime < expires then
+            local timeLeft = expires - currentTime;
+            local days = math.floor(timeLeft / 86400);
+            local hours = math.floor((timeLeft % 86400) / 3600);
+            Bizzare:ClientKick(
+                "You have been Blacklisted\n" ..
+                "Reason: " .. tostring(entry.reason) .. "\n" ..
+                "Expires in: " .. days .. " days " .. hours .. " hours"
+            )
+            return;
+        else
+            Blacklist[userId] = nil;
+        end;
+    end;
+end;
+
+function Bizzare:getGame()
+    local market_service = game:GetService("MarketplaceService");
+    local succ, m_info = pcall(market_service.GetProductInfo, market_service, game.PlaceId);
+    return succ and m_info.Name or "N/A";
+end;
+
+
+--(( Game Functions
+
+local mobs_copy = {}
+for _, mob in ipairs(config.FARM.mobs) do
+    table.insert(mobs_copy, mob)
+end
+
+Lineage.MobCache = {}; 
+function Lineage:BuildMobCache()
+    Lineage.MobCache = {};
+    for _, mobName in ipairs(config.FARM.mobs) do
+        Lineage.MobCache[mobName] = true;
+        Lineage.MobCache[mobName:gsub("%s+", "")] = true;
+    end;
+    for _, bossName in ipairs(config.FARM.bosses) do
+        Lineage.MobCache[bossName] = true;
+        Lineage.MobCache[bossName:gsub("%s+", "")] = true;
+    end;
+end;
+
+function Lineage:GetTarget()
+    if not humanoidrootpart then return nil; end;
+    local closestBoss = nil;
+    local closestMob = nil;
+    local bossDistance = math.huge;
+    local mobDistance = math.huge;
+
+    for _, model in ipairs(workspace.Live:GetChildren()) do
+        if not model:IsA("Model") then continue; end;
+        
+        local hum = model:FindFirstChild("Humanoid")
+        if not hum or hum.Health <= 0 then continue; end;
+        
+        if players:GetPlayerFromCharacter(model) then continue; end;
+
+        local root = model:FindFirstChild("HumanoidRootPart");
+        if not root then continue; end;
+
+        local nameClean = (model.Name or ""):gsub("%s+", "");
+        local distance = (humanoidrootpart.Position - root.Position).Magnitude;
+
+        if config.FARM.selected_boss then
+            local cleanBoss = config.FARM.selected_boss:gsub("%s+", "");
+            if nameClean:find(cleanBoss) then
+                if distance < bossDistance then
+                    bossDistance = distance;
+                    closestBoss = model;
+                end;
+            end;
+        end;
+
+        for _, mobName in pairs(config.FARM.selected_mobs or {}) do
+            if typeof(mobName) == "string" then
+                local cleanMob = mobName:gsub("%s+", "")
+                if nameClean:find(cleanMob) then
+                    if distance < mobDistance then
+                        mobDistance = distance;
+                        closestMob = model;
+                    end;
+                end;
+            end;
+        end;
+    end;
+
+    if getgenv().boss_farming and closestBoss then
+        return closestBoss;
+    end;
+
+    if getgenv().farming and closestMob then
+        return closestMob;
+    end;
+
+    return closestMob;
+end;
+
+task.spawn(function()
+    repeat task.wait() until game:IsLoaded();
+    Lineage:BuildMobCache();
+end);
+
+function Lineage:tweenToMob(mob)
+    if not mob then return; end;
+
+    local root = mob:FindFirstChild("HumanoidRootPart")
+    if not root then return; end;
+
+    local padding = 4;
+    local behindOffset = root.CFrame.LookVector * -padding;
+    local targetPosition = root.Position + behindOffset;
+    local targetCFrame = CFrame.new(targetPosition, root.Position);
+    local distance = (humanoidrootpart.Position - targetPosition).Magnitude;
+
+    if distance < 1.5 then
+        return;
+    end;
+
+    local tween = tweenservice:Create(
+        humanoidrootpart,
+        TweenInfo.new(distance / 40, Enum.EasingStyle.Linear),
+        {CFrame = targetCFrame}
+    )
+    tween:Play()
+end;
+
+function Lineage:teleportToMob(mob)
+    if not mob then return; end;
+
+    local root = mob:FindFirstChild("HumanoidRootPart");
+    if not root then return; end;
+
+    local mode = config.FARM.teleport.mode
+    local offset = config.FARM.teleport.offset
+
+    local targetPosition;
+    if mode == "Behind" then
+        targetPosition = root.Position + (root.CFrame.LookVector * -offset);
+    elseif mode == "Below" then
+        targetPosition = root.Position - Vector3.new(0, offset, 0);
+    elseif mode == "Above" then
+        targetPosition = root.Position + Vector3.new(0, offset, 0);
+    end;
+    humanoidrootpart.CFrame = CFrame.new(targetPosition, root.Position);
+end;
+
+function Lineage:M1()
+    workspace.Live[client.Name].client_character_controller.M1:FireServer(true,false);
+end;
+
+for _,v in pairs(workspace:GetChildren()) do
+    if v:IsA("Model") then
+        local mesh = v:FindFirstChildWhichIsA("MeshPart");
+
+        if mesh then
+            for _,item in pairs(config.ITEMS.available) do
+                if mesh.Name:lower():find(item) then
+                    table.insert(config.ITEMS.cache, mesh);
+                end;
+            end;
+        end;
+    end;
+end;
+
+workspace.ChildAdded:Connect(function(v)
+    if not v:IsA("Model") then return; end;
+    task.wait();
+
+    local mesh = v:FindFirstChildWhichIsA("MeshPart");
+    if mesh then
+        for _,item in pairs(config.ITEMS.available) do
+            if mesh.Name:lower():find(item) then
+                table.insert(config.ITEMS.cache, mesh);
+                Library:Notify("A new Item has appeared: "..mesh.Name, 5, "Item Notifier!");
+            end;
+        end;
+    end;
+end);
+
+function Lineage:GetItems()
+    local closest;
+    local distance = math.huge;
+
+    for i,v in pairs(config.ITEMS.cache) do
+        if v and v.Parent then
+            local dist = (humanoidrootpart.Position - v.Position).Magnitude;
+            if dist < distance then
+                distance = dist;
+                closest = v;
+            end;
+        else
+            config.ITEMS.cache[i] = nil;
+        end;
+    end;
+
+    return closest;
+end;
+
+function Lineage:CollectItems()
+    local item = Lineage:GetItems();
+    if not item then return; end;
+
+    local distance = (humanoidrootpart.Position - item.Position).Magnitude;
+    local tween = tweenservice:Create(
+        humanoidrootpart,
+        TweenInfo.new(distance / math.huge, Enum.EasingStyle.Linear),
+        {CFrame = item.CFrame + Vector3.new(0,2,0)}
+    );
+    tween:Play();
+    tween.Completed:Wait();
+
+    local prompt = item:FindFirstChildWhichIsA("ProximityPrompt", true) or item.Parent:FindFirstChildWhichIsA("ProximityPrompt", true);
+    if prompt then
+        fireproximityprompt(prompt);
+    end;
+end;
+
+function Lineage:Rejoin()
+    game:GetService("TeleportService"):Teleport(game.PlaceId, client);
+end;
+
+function Lineage:ServerHop()
+    Library:Save();
+    local success, result = pcall(function()
+        return httpservice:JSONDecode(game:HttpGet(
+            "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
+        ))
+    end);
+
+    if success and result and result.data then
+        for _, server in ipairs(result.data) do
+            if server.playing < server.maxPlayers and server.id ~= game.JobId then
+                local ok, err = pcall(function()
+                    teleportservice:TeleportToPlaceInstance(game.PlaceId, server.id, client)
+                end);
+                if ok then
+                    break;
+                else
+                    warn("Teleport failed: ", err);
+                end;
+            end;
+        end;
+    else
+        warn("something unexpected happened: ", result);
+    end;
+end;
+
+function Lineage:ItemsExist()
+    for i,v in pairs(config.ITEMS.cache) do
+        if v and v.Parent then
+            return true;
+        else
+            config.ITEMS.cache[i] = nil;
+        end;
+    end;
+    return false;
+end;
+
+function Lineage:Send_Webhook(data)
+    if not config.WEBHOOK.enabled then 
+        return false, "webhook disabled;"
+    end;
+
+    if not config.WEBHOOK.url or config.WEBHOOK.url == "" then 
+        return false, "webhook url missing;"
+    end;
+
+    if typeof(data) ~= "table" then
+        return false, "expected table;"
+    end;
+
+    local pool = {
+        username = config.WEBHOOK.username or "Lotus Notifier";
+        avatar_url = config.WEBHOOK.avatar or "";
+        content = data.content or nil;
+        embeds = data.embeds or nil;
+    };
+    local success, response = pcall(function()
+        return request(
+            {
+                Url = config.WEBHOOK.url;
+                Method = "POST";
+                Headers = {
+                    ["Content-Type"] = "application/json"
+                };
+                Body = httpservice:JSONEncode(pool)
+            }
+        )
+    end);
+
+    if not success then 
+        return false, "webhook request failed;"
+    end;
+
+    if response and (response.StatusCode == 204 or response.StatusCode == 200) then 
+        return true, response
+    else
+        return false, response
+    end;
+end;
+
+function Lineage:pressSkill(key)
+    task.spawn(function()
+        vim:SendKeyEvent(true, Enum.KeyCode[key], false, game)
+        task.wait(0.1)
+        vim:SendKeyEvent(false, Enum.KeyCode[key], false, game)
+    end)
+end
+
+function Lineage:EnableStand()
+    local charStand = "." .. client.Name .. "'s Stand"
+    local stand = client.Character:FindFirstChild("Stand_Weapon") or game.Workspace.Effects:FindFirstChild(charStand)
+    if not stand then Lineage:pressSkill("Tab"); end;
+end;
+
+function Lineage:AutoJoinRaid()
+    if not config.RAID.selected or config.RAID.selected == "None" then return; end;
+
+    local npcName = "";
+    local pos = Vector3.new();
+
+    if config.RAID.selected == "DIO" then
+        npcName = "???";
+        pos = Vector3.new(2793.93, 950.71, 739.18);
+    elseif config.RAID.selected == "Jotaro Kujo" then
+        npcName = "Chumbo";
+        pos = Vector3.new(1071.17, 884.23, 208.62);
+    elseif config.RAID.selected == "Muhammad Avdol" then
+        npcName = "Muhammad Avdol";
+        pos = Vector3.new(349.59, 876.08, 1011.45);
+    elseif config.RAID.selected == "Yoshikage Kira Bites The Dust" then
+        npcName = "Yoshikage Kira";
+        pos = Vector3.new(1035.43, 875.60, -651.25);
+    elseif config.RAID.selected == "Death 13" then
+        npcName = "Death 13 Raid";
+        pos = Vector3.new(829.44, 885.06, -142.65);
+    elseif config.RAID.selected == "The World Over Heaven" then 
+        npcName = "Heaven Ascension DIO";
+        pos = Vector3.new(1006.21, 1003.35, 1736.42);
+    end;
+
+    if game.PlaceId == 14890802310 then
+        if humanoidrootpart then
+            humanoidrootpart.CFrame = CFrame.new(pos)
+        end;
+    end;
+
+    task.spawn(function()
+        while getgenv().auto_join_raid do
+            task.wait(0.5);
+            local npc = workspace.Npcs:FindFirstChild(npcName);
+            if npc then
+                replicatedstorage.requests.character.dialogue:FireServer(npc, "Raid.");
+            end;
+        end;
+    end);
+end;
+
+function Lineage:IsRaidMob(model)
+    if not model then return false end
+
+if model.Parent ~= workspace.Live then
+        return false
+    end
+
+    if players:GetPlayerFromCharacter(model) then
+        return false
+    end
+
+    if model.Name == "Server" then
+        return false
+    end
+
+    if string.find(model.Name, "Hostage") then
+        return false
+    end
+
+    local hum = model:FindFirstChildOfClass("Humanoid")
+    if not hum or hum.Health <= 0 then
+        return false
+    end
+
+    local root = model:FindFirstChild("HumanoidRootPart")
+        or model:FindFirstChildWhichIsA("BasePart", true)
+
+    if not root then
+        return false
+    end
+
+    return true
+end
+
+
+function Lineage:GetRaidBoss()
+    local selected = config.RAID.selected
+    if not selected then return nil end
+
+    for _, model in ipairs(workspace.Live:GetChildren()) do
+        if players:GetPlayerFromCharacter(model) then continue end
+
+        local hum = model:FindFirstChildOfClass("Humanoid")
+        local root = model:FindFirstChild("HumanoidRootPart")
+
+        if not hum or hum.Health <= 0 or not root then continue end
+
+        local cleanModel = model.Name:gsub("[^%a]", ""):lower()
+        local cleanBoss = selected:gsub("[^%a]", ""):lower()
+
+        if cleanModel:find(cleanBoss) then
+            return model
+        end
+    end
+
+    return nil
+end
+
+
+function Lineage:GetRaidMob()
+
+    local targets = {}
+
+    for _, model in ipairs(workspace.Live:GetChildren()) do
+        if self:IsRaidMob(model) then
+            table.insert(targets, model)
+        end
+    end
+
+    if #targets == 0 then
+        return nil
+    end
+
+        local closest
+    local shortest = math.huge
+
+    for _, mob in ipairs(targets) do
+
+        local root = mob:FindFirstChild("HumanoidRootPart")
+
+        if root then
+
+            local dist = (humanoidrootpart.Position - root.Position).Magnitude
+
+            if dist < shortest then
+                shortest = dist
+                closest = mob
+            end
+
+        end
+
+    end
+
+    return closest
+end
+
+
+function Lineage:StartRaidFarm()
+
+    if getgenv().raidFarming then return end
+    getgenv().raidFarming = true
+
+    task.spawn(function()
+
+        while getgenv().auto_raid_farm and getgenv().raidFarming do
+
+            if game.PlaceId == 14890802310 then
+                task.wait(1)
+                continue
+            end
+
+            if not character
+            or not humanoid
+            or not humanoidrootpart
+            or humanoid.Health <= 0 then
+
+                repeat
+                    task.wait()
+                until character
+                and humanoid
+                and humanoidrootpart
+                and humanoid.Health > 0
+
+                task.wait(1)
+            end
+
+            runservice.Heartbeat:Wait()
+
+            local boss = self:GetRaidBoss()
+
+            if boss then
+
+                self:EnableStand()
+                self:teleportToMob(boss)
+                self:M1()
+
+            else
+
+                local mob = self:GetRaidMob()
+
+                if mob then
+
+                    self:EnableStand()
+                    self:teleportToMob(mob)
+                    self:M1()
+
+                end
+
+            end
+
+        end
+
+        getgenv().raidFarming = false
+
+    end)
+end
+
+--// RAID WEBHOOK SYSTEM FIXED
+
+local raidSent = false
+local raidTracking = false
+local raidRewards = {}
+
+local notifEvent = replicatedstorage.requests.general.notification
+
+local function cleanMessage(msg)
+    return tostring(msg):gsub("<.->", "")
+end
+
+-- TRACK REWARDS
+notifEvent.OnClientEvent:Connect(function(msg)
+    if not raidTracking then return end
+
+    msg = tostring(msg)
+
+    if msg:find("Earned") or msg:find("Obtained") then
+        if typeof(raidRewards) ~= "table" then
+            raidRewards = {}
+        end
+
+        local cleaned = cleanMessage(msg)
+        table.insert(raidRewards, cleaned)
+
+        print("[Raid Reward]:", cleaned)
+    end
+end)
+
+-- SEND WEBHOOK
+local function formatTime(seconds)
+    local mins = math.floor(seconds / 60)
+    local secs = math.floor(seconds % 60)
+    return string.format("%02dm %02ds", mins, secs)
+end
+
+local raidStartTime = 0
+
+
+local function sendRaidWebhook()
+    if not config.WEBHOOK.enabled or not config.WEBHOOK.raid then return end
+
+    local player = game:GetService("Players").LocalPlayer
+    local username = player.Name
+    local level = player.PlayerData.SlotData.Level.Value
+
+    local duration = 0
+    if raidStartTime > 0 then
+        duration = tick() - raidStartTime
+    end
+
+    local rewardText = ""
+
+    for _, msg in ipairs(raidRewards) do
+        rewardText = rewardText .. "• " .. msg .. "\n"
+    end
+
+    if rewardText == "" then
+        rewardText = "No rewards detected"
+    end
+
+    Lineage:Send_Webhook({
+        embeds = {{
+            title = "🏆 Raid Completed",
+            color = 0xC77DFF, 
+
+            author = {
+                name = "Player Info"
+            },
+
+            fields = {
+                {
+                    name = "👤 Name",
+                    value = "||" .. username .. "||", -- hidden
+                    inline = true
+                },
+                {
+                    name = "📊 Level",
+                    value = tostring(level),
+                    inline = true
+                },
+                {
+                    name = "⚔️ Raid",
+                    value = tostring(config.RAID.selected or "Unknown"),
+                    inline = false
+                },
+                {
+                    name = "🎁 Rewards",
+                    value = rewardText,
+                    inline = false
+                },
+                {
+                    name = "⏱️ Match Time",
+                    value = formatTime(duration),
+                    inline = true
+                }
+            },
+
+            footer = {
+                text = "Lotus Raid System",
+                icon_url = "https://cdn.discordapp.com/attachments/1366697900976902164/1495315953842524180/image-removebg-preview.png?ex=69e5cd01&is=69e47b81&hm=2950700ffb621093c8eaaffb97ea229323f4cc291d4e088fa9e6735ba44dd556&" -- kannst ändern
+            },
+
+            timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+        }}
+    })
+
+    print("[Webhook] Sent (clean)")
+
+    raidRewards = {}
+end
+
+-- DETECT RAID START / END
+task.spawn(function()
+    while true do
+        task.wait(1)
+
+        if game.PlaceId ~= 14890802310 then
+            if not raidTracking then
+                raidTracking = true
+                raidRewards = {}
+                raidStartTime = tick()
+
+                print("[Raid] Tracking started")
+            end
+        else
+            if raidTracking then
+                raidTracking = false
+                print("[Raid] Tracking stopped")
+            end
+        end
+    end
+end)
+
+-- DETECT RAID COMPLETE (FIXED DELAY)
+task.spawn(function()
+    while true do
+        task.wait(1)
+
+        local raidComplete = client.PlayerGui:FindFirstChild("raidcomplete")
+
+        if raidComplete and not raidSent then
+            raidSent = true
+
+            print("[Raid] Completed detected, waiting for rewards...")
+
+            task.wait(3)
+
+            sendRaidWebhook()
+
+            task.wait(math.random(2,3));
+
+            if getgenv().replay then
+                retry_remote:FireServer(); 
+            end;
+
+        elseif not raidComplete then
+            raidSent = false
+        end
+    end
+end)
+
+local statMap = {
+    [1] = "C",
+    [2] = "B",
+    [3] = "A",
+    [4] = "S"
+};
+
+function Lineage:GetStandInfo()
+    local standValue = client:WaitForChild("PlayerData"):WaitForChild("SlotData"):WaitForChild("Stand").Value;
+
+    if not standValue or standValue == "" then 
+        print("no stand data ####1")
+        return nil; 
+    end;
+
+    local standData = httpservice:JSONDecode(standValue);
+    local standCatalog = get_data_remote:InvokeServer("stand");
+    local skinCatalog  = get_data_remote:InvokeServer("stand_skin");
+    local traitCatalog = get_data_remote:InvokeServer("trait");
+    local traitRarity = traitCatalog[standData.Trait] and traitCatalog[standData.Trait].Rarity or "N/A";
+    local skinRarity = "None";
+
+    if standData.Skin then
+        local skins = skinCatalog[standData.Name];
+        skinRarity = (skins and skins[standData.Skin]) or "Common";
+    end;
+
+    return {
+        name = standData.Name;
+        trait = standData.Trait;
+        traitRarity = traitRarity;
+        strength = standData.Strength;
+        speed = standData.Speed;
+        specialty = standData.Specialty;
+        skin = standData.Skin or "None";
+        skinRarity = skinRarity;
+    };
+end;
+
+local lastStand = nil;
+function Lineage:NotifyStand(info)
+    if not info then return end;
+
+    local current = info.name .. info.trait .. info.strength .. info.speed .. info.specialty
+    if current == lastStand then
+        return;
+    end;
+    lastStand = current;
+
+    local text =
+        "Stand: " .. info.name .. "\n" ..
+        "Trait: " .. info.trait .. " (" .. info.traitRarity .. ")\n" ..
+        "Skin: " .. info.skin .. " (" .. info.skinRarity .. ")\n" ..
+        "Stats: " .. info.strength .. " / " .. info.speed .. " / " .. info.specialty
+    Library:Notify(text, 5, "Stand Roll!");
+end;
+
+function Lineage:CheckStandConditions(info)
+    if not info then 
+        print("no info ####1")
+        return false, nil; 
+    end;
+
+    local mode = config.STAND.config_mode;
+    local hitReasons = {};
+
+    if #config.STAND.selected_stands > 0 then
+        if not table.find(config.STAND.selected_stands, info.name) then
+            return false, nil;
+        end;
+    end;
+
+    local traitHit = false;
+    if #config.STAND.selected_trait_rarity > 0 then
+        if table.find(config.STAND.selected_trait_rarity, info.traitRarity) then
+            traitHit = true;
+        end;
+    end;
+
+    if #config.STAND.selected_trait_names > 0 then
+        if table.find(config.STAND.selected_trait_names, info.trait) then
+            traitHit = true;
+        end;
+    end;
+
+    if traitHit then
+        table.insert(hitReasons, "Trait OK");
+    end;
+
+    local skinHit = false;
+    if #config.STAND.selected_skin_rarity > 0 then
+        if table.find(config.STAND.selected_skin_rarity, info.skinRarity) then
+            skinHit = true;
+        end;
+    else
+        skinHit = true;
+    end;
+
+    if skinHit then
+        table.insert(hitReasons, "Skin - Hit!");
+    end;
+
+    local statHit = false;
+    if #config.STAND.stat_combo > 0 then
+        local actual = {info.strength, info.speed, info.specialty};
+        for _, combo in ipairs(config.STAND.stat_combo) do
+            if combo[1] == actual[1] and combo[2] == actual[2] and combo[3] == actual[3] then
+                statHit = true;
+                break;
+            end;
+        end;
+    else
+        statHit = true;
+    end;
+
+    if statHit then
+        table.insert(hitReasons, "Stats - Hit!");
+    end;
+
+    if mode == "All" then
+        if not (traitHit and skinHit and statHit) then
+            return false, nil;
+        end;
+    else
+        if not (traitHit or skinHit or statHit) then
+            return false, nil;
+        end;
+    end;
+
+    return true, table.concat(hitReasons, " | ");
+end;
+
+function Lineage:SendStandWebhook(info, reason)
+    if not config.WEBHOOK.enabled or not config.WEBHOOK.stand then return; end;
+
+    local embed = {
+        title = "🟢 **: Stand Recieved :**",
+        description = "**" .. info.name .. "**",
+        color = 0x00ff88,
+        fields = {
+            { name = "Trait", value = info.trait .. " (`" .. info.traitRarity .. "`)", inline = true },
+            { name = "Skin", value = info.skin .. " (`" .. info.skinRarity .. "`)", inline = true },
+            { name = "Stats", value = "Strength: `" .. (statMap[info.strength] or info.strength) .. "`\n" .. "Speed: `" .. (statMap[info.speed] or info.speed) .. "`\n" .. "Specialty: `" .. (statMap[info.specialty] or info.specialty) .. "`", inline = false },
+            { name = "Reason", value = "```" .. (reason or "Filter matched") .. "```", inline = false }
+        },
+        timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ"),
+        footer = { text = "Lotus Stand System" }
+    };
+
+    Lineage:Send_Webhook({
+        embeds = { embed };
+        content = "@everyone Good Stand Found!"
+    });
+end;
+
+getgenv().standFarming = false;
+function Lineage:StartStandFarm()
+    if getgenv().standFarming then 
+        return; 
+    end;
+
+    getgenv().standFarming = true;
+    task.spawn(function()
+        local lastArrow = 0;
+        local ARROW_CD = 5;
+
+        while getgenv().standFarming and config.STAND.enabled do
+            local info = self:GetStandInfo();
+
+            if info then
+                self:NotifyStand(info);
+            end;
+
+            if info then
+                local hit, reason = self:CheckStandConditions(info);
+
+                if hit then
+                    local ok, err = self:SendStandWebhook(info, reason);
+                        Library:Notify(
+                        "Stand: "..info.name..
+                        "\nTrait: "..info.trait..
+                        "\nStats: "..statMap[info.strength]..","..statMap[info.speed]..","..statMap[info.specialty],
+                        5,
+                        "Stand Found"
+                    )
+                    config.STAND.enabled = false;
+                    getgenv().standFarming = false;
+                    break;
+                end;
+
+                if tick() - lastArrow >= ARROW_CD then
+                    use_item_remote:FireServer("Stand Arrow");
+                    lastArrow = tick();
+                end;
+            end;
+            task.wait(2);
+        end;
+        getgenv().standFarming = false;
+    end);
+end;
+
+local ESP = {
+    Players = {},
+    Bosses = {},
+    Items = {}
+}
+
+local ESPSettings = {
+    Player = {
+        Name = { Enabled = false, Color = Color3.fromRGB(255,255,255), Size = 14 },
+        Skeleton = { Enabled = false, Color = Color3.fromRGB(255,255,255), Thickness = 1 }
+    },
+
+    Boss = {
+        Name = { Enabled = false, Color = Color3.fromRGB(255,0,0), Size = 16 },
+        Aura = { Enabled = false, Color = Color3.fromRGB(255,0,0), OutlineColor = Color3.fromRGB(255,255,255) }
+    },
+
+    Item = {
+        Name = { Enabled = false, Color = Color3.fromRGB(0,255,255), Size = 14 },
+        Aura = { Enabled = false, Color = Color3.fromRGB(0,255,255), OutlineColor = Color3.fromRGB(255,255,255) }
+    }
+}
+
+local function WorldToScreen(pos)
+    local vec, visible = camera:WorldToViewportPoint(pos)
+    return Vector2.new(vec.X, vec.Y), visible
+end
+
+local function CreatePlayerESP()
+    local esp = {
+        Name = Drawing.new("Text"),
+        Box = Drawing.new("Square"),
+        Lines = {}
+    }
+
+    esp.Name.Center = true
+    esp.Name.Outline = true
+
+    esp.Box.Filled = false
+
+    -- mehr lines für skeleton
+    for i = 1, 20 do
+        local l = Drawing.new("Line")
+        table.insert(esp.Lines, l)
+    end
+
+    return esp
+end
+
+
+local function UpdatePlayerESP()
+    for _, plr in pairs(players:GetPlayers()) do
+        if plr ~= client and plr.Character then
+            local char = plr.Character
+            local root = char:FindFirstChild("HumanoidRootPart")
+            local head = char:FindFirstChild("Head")
+
+            if root and head then
+                if not ESP.Players[plr] then
+                    ESP.Players[plr] = CreatePlayerESP()
+                end
+
+                local esp = ESP.Players[plr]
+
+                local pos, vis = WorldToScreen(root.Position)
+                local headPos, headVis = WorldToScreen(head.Position + Vector3.new(0,1,0))
+
+                -- 📏 DISTANCE
+                local distance = (camera.CFrame.Position - root.Position).Magnitude
+
+                -- ❌ zu weit → alles aus
+                if distance > 800 or not vis then
+                    esp.Name.Visible = false
+                    for _, line in pairs(esp.Lines) do
+                        line.Visible = false
+                    end
+                    continue
+                end
+
+                -- 👤 NAME + DISTANCE
+                if ESPSettings.Player.Name.Enabled and headVis then
+                    esp.Name.Text = plr.Name .. " [" .. math.floor(distance) .. "m]"
+                    esp.Name.Color = ESPSettings.Player.Name.Color
+                    esp.Name.Size = ESPSettings.Player.Name.Size
+                    esp.Name.Position = headPos
+                    esp.Name.Visible = true
+                else
+                    esp.Name.Visible = false
+                end
+
+                -- 💀 SKELETON (nur wenn nah)
+                if ESPSettings.Player.Skeleton.Enabled and distance < 300 then
+                    local connections = {
+                        {"Head","UpperTorso"},{"UpperTorso","LowerTorso"},
+                        {"UpperTorso","LeftUpperArm"},{"LeftUpperArm","LeftLowerArm"},{"LeftLowerArm","LeftHand"},
+                        {"UpperTorso","RightUpperArm"},{"RightUpperArm","RightLowerArm"},{"RightLowerArm","RightHand"},
+                        {"LowerTorso","LeftUpperLeg"},{"LeftUpperLeg","LeftLowerLeg"},{"LeftLowerLeg","LeftFoot"},
+                        {"LowerTorso","RightUpperLeg"},{"RightUpperLeg","RightLowerLeg"},{"RightLowerLeg","RightFoot"},
+
+                        -- R6 fallback
+                        {"Head","Torso"},
+                        {"Torso","Left Arm"},{"Left Arm","Left Leg"},
+                        {"Torso","Right Arm"},{"Right Arm","Right Leg"}
+                    }
+
+                    local index = 1
+
+                    for _, pair in ipairs(connections) do
+                        local a = char:FindFirstChild(pair[1])
+                        local b = char:FindFirstChild(pair[2])
+                        local line = esp.Lines[index]
+
+                        if a and b then
+                            local p1, v1 = WorldToScreen(a.Position)
+                            local p2, v2 = WorldToScreen(b.Position)
+
+                            if v1 and v2 then
+                                line.From = p1
+                                line.To = p2
+                                line.Color = ESPSettings.Player.Skeleton.Color
+                                line.Thickness = ESPSettings.Player.Skeleton.Thickness
+                                line.Visible = true
+                            else
+                                line.Visible = false
+                            end
+                        else
+                            line.Visible = false
+                        end
+
+                        index += 1
+                    end
+                else
+                    for _, line in pairs(esp.Lines) do
+                        line.Visible = false
+                    end
+                end
+            end
+        end
+    end
+end
+
+local function IsBoss(model)
+    for _, b in pairs(config.FARM.bosses) do
+        if model.Name:lower():find(b:lower()) then
+            return true
+        end
+    end
+    return false
+end
+
+local function CreateBossESP(model)
+    local highlight = Instance.new("Highlight")
+    highlight.Parent = model
+
+    local name = Drawing.new("Text")
+    name.Center = true
+    name.Outline = true
+
+    return {
+        Highlight = highlight,
+        Name = name
+    }
+end
+
+
+local function UpdateBossESP()
+    -- CLEANUP (entfernt alte/buggy ESPs)
+    for mob, esp in pairs(ESP.Bosses) do
+        if not mob or not mob.Parent then
+            if esp.Highlight then esp.Highlight:Destroy() end
+            if esp.Name then esp.Name:Remove() end
+            ESP.Bosses[mob] = nil
+        end
+    end
+
+    -- UPDATE / CREATE
+    for _, mob in pairs(workspace.Live:GetChildren()) do
+        if mob:IsA("Model") and IsBoss(mob) then
+
+            local root = mob:FindFirstChild("HumanoidRootPart")
+                or mob:FindFirstChildWhichIsA("BasePart")
+
+            if root then
+                -- CREATE wenn nicht existiert
+                if not ESP.Bosses[mob] then
+                    ESP.Bosses[mob] = CreateBossESP(mob)
+                end
+
+                local esp = ESP.Bosses[mob]
+
+                -- HIGHLIGHT
+                if esp.Highlight then
+                    esp.Highlight.FillColor = ESPSettings.Boss.Aura.Color
+                    esp.Highlight.OutlineColor = ESPSettings.Boss.Aura.OutlineColor
+                    esp.Highlight.Enabled = ESPSettings.Boss.Aura.Enabled
+                end
+
+                -- SCREEN POSITION
+                local pos, vis = WorldToScreen(root.Position)
+
+                -- NAME ESP
+                if ESPSettings.Boss.Name.Enabled and vis then
+                    esp.Name.Text = mob.Name
+                    esp.Name.Color = ESPSettings.Boss.Name.Color
+                    esp.Name.Size = ESPSettings.Boss.Name.Size
+                    esp.Name.Position = pos
+                    esp.Name.Visible = true
+                else
+                    esp.Name.Visible = false
+                end
+            end
+        end
+    end
+end
+
+local function CreateItemESP(item)
+    local highlight = Instance.new("Highlight")
+    highlight.Adornee = item.Parent
+    highlight.Parent = item.Parent
+
+    local name = Drawing.new("Text")
+    name.Center = true
+    name.Outline = true
+    name.Visible = false
+
+    return {
+        Highlight = highlight,
+        Name = name
+    }
+end
+
+
+local function UpdateItemESP()
+
+    -- CLEANUP
+    for item, esp in pairs(ESP.Items) do
+        if not item or not item.Parent then
+            if esp.Highlight then esp.Highlight:Destroy() end
+            if esp.Name then esp.Name:Destroy() end
+            ESP.Items[item] = nil
+        end
+    end
+
+    -- UPDATE
+    for _, item in pairs(config.ITEMS.cache) do
+        if item and item.Parent then
+
+            if not ESP.Items[item] then
+                ESP.Items[item] = CreateItemESP(item)
+            end
+
+            local esp = ESP.Items[item]
+            local pos, vis = WorldToScreen(item.Position)
+
+            -- HIGHLIGHT
+            if esp.Highlight then
+                esp.Highlight.FillColor = ESPSettings.Item.Aura.Color
+                esp.Highlight.OutlineColor = ESPSettings.Item.Aura.OutlineColor
+                esp.Highlight.Enabled = ESPSettings.Item.Aura.Enabled
+            end
+
+            -- NAME
+            if ESPSettings.Item.Name.Enabled and vis then
+                esp.Name.Text = item.Name
+                esp.Name.Color = ESPSettings.Item.Name.Color
+                esp.Name.Size = ESPSettings.Item.Name.Size
+                esp.Name.Position = pos
+                esp.Name.Visible = true
+            else
+                esp.Name.Visible = false
+            end
+        end
+    end
+end
+
+players.PlayerRemoving:Connect(function(plr)
+    if ESP.Players[plr] then
+        local esp = ESP.Players[plr]
+
+        esp.Name:Remove()
+
+        for _, line in pairs(esp.Lines) do
+            line:Remove()
+        end
+
+        ESP.Players[plr] = nil
+    end
+end)
+
+runservice.RenderStepped:Connect(function()
+    UpdatePlayerESP()
+    UpdateBossESP()
+    UpdateItemESP()
+end)
+
+function Lineage:SearchPlayer(Name)
+    local ClosestMatch = nil;
+    local ClosestLetters = 0;
+    for i,v in pairs(workspace.Living:GetChildren()) do
+        local matched_letters = 0;
+        for i = 1, #Name do
+            if string.sub(Name:lower(), 1, i) == string.sub(v.Name:lower(), 1, i) then
+                    matched_letters = i;
+            end;
+        end;
+        if matched_letters > ClosestLetters then
+            ClosestLetters = matched_letters;
+            ClosestMatch = v;
+        end;
+    end;
+    return ClosestMatch;
+end;
+
+--(( Anti Afk
+
+pcall(function()
+    game:GetService("Players").LocalPlayer.Idled:Connect(function()
+        game:GetService("VirtualUser"):ClickButton2(Vector2.new())
+    end)
+end)
+
+--(( AUTO STORY SYSTEM
+
+local storyRunning = false;
+local storyThread = nil;
+
+local NPC_POSITIONS = {
+    ["Okuyasu Nijimura"] = Vector3.new(2189.90, 874.66, -444.03),
+    ["Koichi Hirose"] = Vector3.new(1257.35, 876.14, -244.95);
+    ["Jotaro Kujo"] = Vector3.new(1168.86, 884.22, 25.30);
+    ["Toyohiro"] = Vector3.new(465.83, 896.89, -918.77);
+    ["Kobayashi"] = Vector3.new(720.07, 894.56, -284.94);
+    ["Muhammad Avdol"] = Vector3.new(331.42, 876.08, 1022.37);
+    ["Joseph Joestar"] = Vector3.new(1166.51, 869.82, -239.92);
+    ["Tonio Trussardi"] = Vector3.new(1388.99, 876.28, -620.21);
+    ["Lowly Thief"] = Vector3.new(1582.44, 893.22, -398.01);
+    ["Mr. Rengatei"] = Vector3.new(1036.77, 875.60, -553.26);
+    ["Reimi"] = Vector3.new(778.68, 886.30, -762.94);
+    ["Josuke Higashikata"] = Vector3.new(477.21, 886.41, -189.92);
+    ["Masuyo"] = Vector3.new(1083.04, 875.60, -508.95);
+    ["Akihiko"] = Vector3.new(1083.04, 875.60, -508.95);
+    ["Reina"] = Vector3.new(1311.39, 875.60, -613.87);
+    ["Shigechi"] = Vector3.new(819.47, 885.06, -164.74);
+    ["Boxing Coach"] = Vector3.new(1114.47, 912.19, 11.72);
+    ["Aya Tsuji"] = Vector3.new(601.71, 886.39, -494.80);
+    ["Detective"] = Vector3.new(247.66, 892.76, 174.46);
+    ["Rohan Kishibe"] = Vector3.new(2545.53, 874.52, -71.86);
+    ["Hayato"] = Vector3.new(2223.5, 874.73, -147.98);
+    ["Yoshikage Kira"] = Vector3.new(1022.11, 875.60, -652.32);
+}
+local RAID_MOBS = {
+    ["Muhammad Avdol"] = "Muhammad Avdol",
+    ["Yoshikage Kira"] = "Yoshikage Kira",
+    ["Jotaro Kujo"]    = "Jotaro Kujo",
+    ["DIO"]            = "DIO",
+}
+
+function Lineage:GetActiveStorylineQuest()
+    local ok, data = pcall(function()
+        return httpservice:JSONDecode(client.PlayerData.SlotData.CurrentQuests.Value)
+    end)
+    if not ok or type(data) ~= "table" then return nil end;
+
+    for _, quest in ipairs(data) do
+        if (quest.Name or ""):find("Storyline") then
+            return quest;
+        end;
+    end;
+    return nil;
+end;
+
+function Lineage:GetQuestType(quest)
+    if not quest then return nil, nil end;
+
+    if quest.Talk then
+        local pendingTalks = {};
+        for npcName, done in pairs(quest.Talk) do
+            if not done then
+                table.insert(pendingTalks, npcName);
+            end;
+        end;
+
+        if #pendingTalks > 0 then
+            return "Talk", pendingTalks;
+        end;
+    end;
+
+    if quest.Kills then
+        for mobName, count in pairs(quest.Kills) do
+            if RAID_MOBS[mobName] then
+                return "RaidKill", mobName
+            end;
+        end;
+        for mobName, count in pairs(quest.Kills) do
+            return "Kill", mobName, count
+        end;
+    end;
+
+    if quest.Raids ~= nil then
+        return "Raid", nil
+    end;
+
+    return nil, nil;
+end;
+
+function Lineage:WaitAtRaidCircle(raidBossName, waitTime)
+    waitTime = waitTime or 10
+
+    local pos = nil;
+
+    if raidBossName == "Muhammad Avdol" then
+        pos = Vector3.new(349.59, 876.08, 1011.45)
+    elseif raidBossName == "Jotaro Kujo" then
+        pos = Vector3.new(1071.17, 884.23, 208.62)
+    elseif raidBossName == "DIO" then
+        pos = Vector3.new(2793.93, 950.71, 739.18)
+    elseif raidBossName == "Yoshikage Kira Bites The Dust" then
+        pos = Vector3.new(1035.43, 875.60, -651.25)
+    elseif raidBossName == "Yoshikage Kira" then
+    pos = Vector3.new(1035.43, 875.60, -651.25)
+    elseif raidBossName == "Death 13" then
+        pos = Vector3.new(829.44, 885.06, -142.65)
+    elseif raidBossName == "The World Over Heaven" then
+        pos = Vector3.new(1006.21, 1003.35, 1736.42)
+    end
+
+    if not pos then
+        return;
+    end;
+
+    local startTime = tick()
+    while tick() - startTime < waitTime do
+        task.wait(0.1)
+        if humanoidrootpart then
+            humanoidrootpart.CFrame = CFrame.new(pos)
+        end;
+    end;
+end;
+
+function Lineage:HandleRaidKillQuest(quest, raidBossName)
+    self:TalkToNPC(raidBossName)
+    task.wait(0.5);
+
+    self:WaitAtRaidCircle(raidBossName, 10)
+
+    local waitTimeout = tick() + 30
+    repeat
+        task.wait(1);
+    until game.PlaceId ~= 14890802310 or tick() > waitTimeout
+
+    task.wait(2);
+
+    config.RAID.selected = raidBossName;
+    getgenv().auto_raid_farm = true;
+    getgenv().raidFarming = false;
+    getgenv().replay = true;
+    task.wait(0.1);
+    self:StartRaidFarm()
+
+    local done = self:WaitForQuestComplete(quest.Name, 600);
+
+    getgenv().auto_join_raid = false;
+    getgenv().auto_raid_farm = false;
+    getgenv().raidFarming = false;
+    getgenv().replay = false;
+    config.RAID.selected = nil;
+
+    if done then
+        Library:Notify("Raid Quest done;", 3, "Notification!")
+    else
+        Library:Notify("Raid Quest Timeout;", 3, "Notification!")
+    end;
+end;
+
+function Lineage:FindNPCInWorkspace(npcName)
+    for _, npc in ipairs(workspace.Npcs:GetChildren()) do
+        if npc.Name:lower():find(npcName:lower()) then
+            return npc;
+        end;
+    end;
+    for _, obj in ipairs(workspace:GetChildren()) do
+        if obj:IsA("Model") and obj.Name:lower():find(npcName:lower()) then
+            return obj;
+        end;
+    end;
+    return nil;
+end;
+
+function Lineage:TalkToNPC(npcName)
+    local npc = self:FindNPCInWorkspace(npcName)
+
+    if not npc then
+        local pos = NPC_POSITIONS[npcName]
+        if pos and humanoidrootpart then
+            humanoidrootpart.CFrame = CFrame.new(pos)
+            task.wait(1)
+            npc = self:FindNPCInWorkspace(npcName)
+        end;
+    end;
+
+    if not npc then
+        return false;
+    end;
+
+    local root = npc:FindFirstChild("HumanoidRootPart")
+        or npc:FindFirstChildWhichIsA("BasePart")
+
+    if root and humanoidrootpart then
+        humanoidrootpart.CFrame = CFrame.new(root.Position + root.CFrame.LookVector * -3, root.Position)
+        task.wait(0.5);
+    end;
+
+    pcall(function()
+        replicatedstorage.requests.character.dialogue:FireServer(npc, 1)
+    end)
+
+    local dialogueGui = client.PlayerGui:WaitForChild("Dialogue", 5);
+    if dialogueGui then
+        local holder = dialogueGui:WaitForChild("Holder", 5)
+        if holder then
+            holder:WaitForChild("Choices", 5);
+        end;
+    end;
+    task.wait(0.5);
+
+    local maxSteps = 12;
+    for step = 1, maxSteps do
+        local option = self:GetDialogueFirstOption()
+
+        if not option then
+            task.wait(0.3)
+            option = self:GetDialogueFirstOption()
+            if not option then break end;
+        end;
+
+        pcall(function()
+            replicatedstorage.requests.character.dialogue:FireServer(npc, option)
+        end)
+
+        task.wait(0.6);
+    end;
+    return true;
+end;
+
+function Lineage:GetDialogueFirstOption()
+    local dialogueGui = client.PlayerGui:FindFirstChild("Dialogue")
+    if not dialogueGui or not dialogueGui.Enabled then return nil end;
+
+    local ok, result = pcall(function()
+        return dialogueGui.Holder.Choices.Holder1["1"].Choice;
+    end)
+
+    if not ok or not result then return nil end;
+    if not result:IsA("TextButton") then return nil end;
+    if not result.Visible or result.Text == "" then return nil end;
+
+    return result.Text;
+end;
+
+function Lineage:GetKillRequirementsFromUI()
+    local requirements = {};
+    local gui = client.PlayerGui;
+    local holder = gui:FindFirstChild("menu")
+        and gui.menu:FindFirstChild("task_holder")
+        and gui.menu.task_holder:FindFirstChild("holder")
+        and gui.menu.task_holder.holder:FindFirstChild("newobjective")
+        and gui.menu.task_holder.holder.newobjective:FindFirstChild("ScrollingFrame")
+        and gui.menu.task_holder.holder.newobjective.ScrollingFrame:FindFirstChild("holder")
+
+    if not holder then 
+        return requirements;
+    end;
+
+    local single = holder:FindFirstChild("singleobjective")
+    if single then
+        local label = single:FindFirstChild("TextLabel")
+        if label and label.Text ~= "" then
+            local mobName, current, max = label.Text:match("Defeat%s+(.-)%s*[「「(「(](%d+)/(%d+)")
+            if mobName and max then
+                requirements[mobName] = tonumber(max);
+            end;
+        end;
+    end;
+
+    local multi = holder:FindFirstChild("multiobjective")
+    if multi then
+        for _, child in ipairs(multi:GetChildren()) do
+            local label = child:FindFirstChild("TextLabel") 
+                or (child:FindFirstChildWhichIsA("TextLabel"))
+            if label and label.Text ~= "" then
+                local mobName, current, max = label.Text:match("Defeat%s+(.-)%s*[「「(「(](%d+)/(%d+)")
+                if mobName and max then
+                    requirements[mobName] = tonumber(max);
+                end;
+            end;
+        end;
+
+        local textHolder = multi:FindFirstChild("text")
+        if textHolder then
+            local label = textHolder:FindFirstChild("TextLabel")
+            if label and label.Text ~= "" then
+                local mobName, current, max = label.Text:match("Defeat%s+(.-)%s*[「「(「(](%d+)/(%d+)")
+                if mobName and max then
+                    requirements[mobName] = tonumber(max);
+                end;
+            end;
+        end;
+    end;
+
+    return requirements;
+end;
+
+function Lineage:GetCurrentKillCounts()
+    local counts = {}
+    local ok, data = pcall(function()
+        return httpservice:JSONDecode(client.PlayerData.SlotData.CurrentQuests.Value)
+    end)
+    if not ok or type(data) ~= "table" then return counts end;
+
+    for _, quest in ipairs(data) do
+        if (quest.Name or ""):find("Storyline") and quest.Kills then
+            for mobName, count in pairs(quest.Kills) do
+                counts[mobName] = count;
+            end;
+        end;
+    end;
+    return counts;
+end;
+
+function Lineage:KillMobForQuest(quest)
+    local killTimeout = tick() + 300
+
+    while storyRunning and tick() < killTimeout do
+        runservice.Heartbeat:Wait()
+
+        local currentQuest = nil;
+        local ok, freshData = pcall(function()
+            return httpservice:JSONDecode(client.PlayerData.SlotData.CurrentQuests.Value)
+        end)
+        if ok and type(freshData) == "table" then
+            for _, q in ipairs(freshData) do
+                if q.Name == quest.Name then
+                    currentQuest = q;
+                    break;
+                end;
+            end;
+        end;
+
+        if not currentQuest or not currentQuest.Kills then break end;
+
+        local requirements = self:GetKillRequirementsFromUI()
+        local currentCounts = self:GetCurrentKillCounts()
+        local pendingMobs = {}
+
+        for mobName, currentCount in pairs(currentQuest.Kills) do
+            local needed = requirements[mobName]
+            if needed then
+                if currentCount < needed then
+                    table.insert(pendingMobs, mobName);
+                end;
+            else
+                table.insert(pendingMobs, mobName);
+            end;
+        end;
+
+        if #pendingMobs == 0 then
+            break;
+        end;
+
+        local bestTarget = nil;
+        local shortest = math.huge;
+
+        for _, model in ipairs(workspace.Live:GetChildren()) do
+            if players:GetPlayerFromCharacter(model) then continue end
+
+            local hum = model:FindFirstChildOfClass("Humanoid")
+            if not hum or hum.Health <= 0 then continue end
+
+            local root = model:FindFirstChild("HumanoidRootPart")
+            if not root then continue end
+
+            local cleanModel = model.Name:gsub("%s+", ""):lower()
+
+            for _, mobName in ipairs(pendingMobs) do
+                local cleanTarget = mobName:gsub("%s+", ""):lower()
+                if cleanModel:find(cleanTarget) then
+                    local dist = (humanoidrootpart.Position - root.Position).Magnitude
+                    if dist < shortest then
+                        shortest = dist;
+                        bestTarget = model;
+                    end;
+                    break;
+                end;
+            end;
+        end;
+
+        if bestTarget then
+            self:EnableStand()
+            self:teleportToMob(bestTarget)
+            self:M1()
+
+            local controller = workspace.Live[client.Name] and
+                workspace.Live[client.Name]:FindFirstChild("client_character_controller")
+            if controller then
+                for _, key in ipairs({"E", "R", "Z"}) do
+                    pcall(function()
+                        controller.Skill:FireServer(key, true)
+                    end)
+                end;
+            end;
+        else
+            task.wait(0.5);
+        end;
+    end;
+end;
+
+function Lineage:IsQuestComplete(questName)
+    local ok, data = pcall(function()
+        return httpservice:JSONDecode(client.PlayerData.SlotData.CompleteQuests.Value)
+    end)
+    if not ok or type(data) ~= "table" then return false end
+    return table.find(data, questName) ~= nil;
+end;
+
+function Lineage:WaitForQuestComplete(questName, timeout)
+    timeout = timeout or 15;
+    local startTime = tick()
+    repeat
+        task.wait(1)
+        if self:IsQuestComplete(questName) then
+            return true
+        end
+    until tick() - startTime > timeout
+    return false;
+end;
+
+function Lineage:StartAutoStory()
+    if storyRunning then return end;
+    storyRunning = true;
+
+    storyThread = task.spawn(function()
+        while storyRunning do
+            task.wait(1);
+
+            if not humanoidrootpart or not humanoid or humanoid.Health <= 0 then
+                task.wait(1);
+                continue;
+            end;
+
+            local quest = self:GetActiveStorylineQuest()
+
+            if not quest then
+                task.wait(5);
+                continue;
+            end;
+
+            local questType, target = self:GetQuestType(quest)
+            if questType == "Talk" then
+                for _, npcName in ipairs(target) do
+                    if not storyRunning then break end;
+
+                    local success = self:TalkToNPC(npcName);
+
+                    if not success then
+                        task.wait(3)
+                        self:TalkToNPC(npcName);
+                    end;
+                    task.wait(1);
+                end;
+                self:WaitForQuestComplete(quest.Name, 5)
+                task.wait(2)
+            elseif questType == "Kill" then
+                self:KillMobForQuest(quest)
+                self:WaitForQuestComplete(quest.Name, 300)
+                task.wait(2)
+            elseif questType == "RaidKill" then
+                self:HandleRaidKillQuest(quest, target)
+                task.wait(2)
+            elseif questType == "Raid" then
+                config.RAID.selected = config.RAID.bosses[1]
+                getgenv().auto_join_raid = true
+                self:AutoJoinRaid()
+                self:WaitForQuestComplete(quest.Name, 120)
+                getgenv().auto_join_raid = false;
+                config.RAID.selected = nil;
+                task.wait(2);
+            else
+                task.wait(5);
+            end;
+        end;
+    end)
+end;
+
+function Lineage:StopStory()
+    storyRunning = false
+    if storyThread then
+        task.cancel(storyThread)
+        storyThread = nil;
+    end;
+end;
+
+function Lineage:HideName(hidden)
+    local ok, label = pcall(function()
+        return client.PlayerGui.Leaderboard.frame.holder.scrollingframe.holder.Template.name.username;
+    end);
+
+    if not ok or not label then
+        return;
+    end;
+
+    if hidden then
+        label.Text = "***";
+    else
+        label.Text = client.Name;
+    end;
+end;
+
+function Lineage:AutoSell()
+    local inventoryValue = client.PlayerData.SlotData.Inventory;
+    local raw = inventoryValue.Value;
+    if raw == "" then return; end;
+
+    local ok, items = pcall(httpservice.JSONDecode, httpservice, raw);
+    if not ok then
+        return;
+    end;
+
+    local sellRemote = replicatedstorage.requests.general.SellItem;
+    local soldCount = 0;
+
+    for _, item in ipairs(items) do
+        if item.ID and not item.Locked then
+            sellRemote:FireServer({
+                {
+                    ["ID"]         = item.ID;
+                    ["Pips"]       = item.Pips or {};
+                    ["Name"]       = item.Name;
+                    ["duplicates"] = 1;
+                }
+            });
+            soldCount += 1;
+            task.wait(0.2);
+        end;
+    end;
+
+    if soldCount > 0 then
+        Library:Notify("Sold " .. soldCount .. " item(s)", 3, "Auto Sell");
+    end;
+end;
+
+function Lineage:AutoOpenChest()
+    local useItemRemote = replicatedstorage.requests.character.use_item;
+    useItemRemote:FireServer("Rare Chest", { ["UseAll"] = true });
+    task.wait(0.5);
+    useItemRemote:FireServer("Common Chest", { ["UseAll"] = true });
+    task.wait(0.5);
+    useItemRemote:FireServer("Legendary Chest", { ["UseAll"] = true });
+end;
+
+--(( UI
+
+local Repo = "https://raw.githubusercontent.com/8T1LiYuMh96vrfvMfqAvlPbi4dR2Hhx8yzE16dG";
+Library = loadstring(game:HttpGet(Repo .. "/vVoZlsyDgeOvBT90QbnXoFDQ/main/aSbQ28Y1UMk1"))(); 
+local Setup = loadstring(game:HttpGet(Repo .. "/vVoZlsyDgeOvBT90QbnXoFDQ/main/HsUTSb1JpEQZ"))(); 
+Setup:Basics();
+
+local Window = Library:CreateWindow({ Title = "", Icon = { "rbxassetid://101308344257609", UDim2.new(0, 125, 0, 125) } });
+
+local Tabs = {
+    Dashboard = Window:CreateTab({ Title = "Dashboard", Icon = "rbxassetid://120063430541108" }),
+    Farming = Window:CreateTab({ Title = "Farm", Icon = "rbxassetid://103447818844163" }),
+    Miscellaneous = Window:CreateTab({ Title = "Misc", Icon = "rbxassetid://87313080232273" }),
+    Pvp = Window:CreateTab({ Title = "PvP", Icon = "rbxassetid://90068192444373" }),
+    Stand = Window:CreateTab({ Title = "Stand", Icon = "rbxassetid://83849507207611" }),
+    Esp = Window:CreateTab({ Title = "Esp", Icon = "rbxassetid://82437476120946" }),
+    Config = Window:CreateTab({ Title = "Config", Icon = "rbxassetid://94377454418556" }),
+};
+
+local Sections = {
+    Dashboard = Tabs.Dashboard:CreateSection({ Title = "Info", Side = "Full", }),
+    About = Tabs.Dashboard:CreateSection({ Title = "About", Side = "Left", }),
+    Insights = Tabs.Dashboard:CreateSection({ Title = "Insights", Side = "Right", }),
+    UI_Controls = Tabs.Config:CreateSection({ Title = "UI", Side = "Left", }),
+    Save = Tabs.Config:CreateSection({ Title = "Save", Side = "Right", }),
+    Themes = Tabs.Config:CreateSection({ Title = "Themes", Side = "Left", }),
+    Farming = Tabs.Farming:CreateSection({ Title = "XP", Side = "Right", }),
+    Farming_Story = Tabs.Farming:CreateSection({ Title = "Story", Side = "Left", }),
+    Farming_Boss = Tabs.Farming:CreateSection({ Title = "Boss", Side = "Left", }),
+    Farming_Settings = Tabs.Farming:CreateSection({ Title = "Farm Config", Side = "Right", }),
+    Automatic = Tabs.Farming:CreateSection({ Title = "Automatic", Side = "Right", }),
+    Items = Tabs.Miscellaneous:CreateSection({ Title = "Items", Side = "Full", }),
+    Raid = Tabs.Farming:CreateSection({ Title = "Raid", Side = "Left", }),
+    Stats = Tabs.Stand:CreateSection({ Title = "Stats Info", Side = "Full", }),
+    Stand = Tabs.Stand:CreateSection({ Title = "Stand Farm", Side = "Full", }),
+    Webhook = Tabs.Config:CreateSection({ Title = "Webhook", Side = "Right", }),
+    Other_Misc = Tabs.Miscellaneous:CreateSection({ Title = "Other", Side = "Left", }),
+    Players_Esp = Tabs.Esp:CreateSection({ Title = "Players Esp", Side = "Left", }),
+    Boss_Esp = Tabs.Esp:CreateSection({ Title = "Boss Esp", Side = "Right", }),
+    Item_Esp = Tabs.Esp:CreateSection({ Title = "Item Esp", Side = "Left", }),
+    Items_Sell = Tabs.Miscellaneous:CreateSection({ Title = "Items", Side = "Right", }),
+    Chests = Tabs.Miscellaneous:CreateSection({ Title = "Chests", Side = "Left", }),
+    Pvp = Tabs.Pvp:CreateSection({ Title = "Players", Side = "Full", }),
+};
+
+local Greeting = Sections.Dashboard:CreateLabel({ Text = "Welcome, ".. tostring(client) .. "!", Alignment = "Center" });
+local DiscordMembers = Sections.About:CreateLabel({ Text = "Members: 2.1k", Alignment = "Center" });
+local DiscordInvite = Sections.About:CreateLabel({ Text = "discord.gg/getlotus", Alignment = "Center" });
+
+local DiscordCopy; DiscordCopy = Sections.About:CreateButton({ 
+    Text = "Copy Invite", 
+    Callback = function()
+        setclipboard("https://discord.gg/HPa9UwxssG"); 
+        Library:Notify("Copied Discord invite to Clipboard", 2, "Notification!");
+
+        DiscordCopy:ChangeText("Copied Invite!");
+        task.wait(math.random(1, 2));
+        DiscordCopy:ChangeText("Copy Invite");
+    end});
+
+local Game = Sections.Insights:CreateButton({ 
+    Text = "".. tostring(game.PlaceId), 
+    Callback = function() 
+end})
+
+local Place = Sections.Insights:CreateButton({ 
+    Text = "".. tostring(Bizzare:getGame()), 
+    Callback = function() 
+end})
+
+local Build = Sections.Insights:CreateButton({ 
+    Text = "Build: 🟢 ".. tostring(Bizzare:Build()), 
+    Callback = function() 
+end})
+
+local Save; Save = Sections.Save:CreateButton({
+    Text = "Save Config",
+    Alignment = "Left",
+    Callback = function()
+        Library:Save()
+        Library:Notify("Saved Config", 3, "Lotus")
+    end,
+})
+
+local Load; Load = Sections.Save:CreateButton({
+    Text = "Load Config",
+    Alignment = "Left",
+    Callback = function()
+        Library:Load()
+        Library:Notify("Loaded saved Config", 3, "Lotus")
+    end,
+})
+    
+local AutoSave; AutoSave = Sections.Save:CreateToggle({
+    Text = "Auto Save";
+    Subtext = "";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(Value)
+        getgenv().save_ts = Value;
+
+        task.spawn(function()
+            while getgenv().save_ts do
+                task.wait(15);
+                Library:Save();
+            end;
+        end);
+    end;    
+    Flag = "auto_save";
+})
+
+local UiToggle = Sections.UI_Controls:CreateKeybind({
+    Text = "Toggle UI";
+    Subtext = "Hide Menu with Key" ;
+    Alignment = "Left"; 
+    Default = "N"; 
+    Callback = function() 
+        Window:Visibility();
+    end;
+    Flag = "ui_keybind";
+});
+    
+local Unload = Sections.UI_Controls:CreateButton({
+    Text = "Exit Menu";
+    Alignment = "Center"; 
+    Callback = function() 
+        Window:Exit();
+    end;
+});
+
+getgenv().theme_set = nil;
+local ThemeSelected = Sections.Themes:CreateDropdown({
+    Text = "Theme";
+    Subtext = "";
+    Alignment = "Left";
+    Choices = { "Dark", "Light", "Midnight", "Bloom", "Minecraft", "Windows 11", "Lotus Dark", "Default" };
+    Multi = false;
+    Default = "Default";
+    Callback = function(Value)
+        getgenv().theme_set = Value;
+    end;
+    Flag = "theme_selected";
+})
+
+local ThemeSet = Sections.Themes:CreateToggle({
+    Text = "Set Theme";
+    Subtext = "";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(v)
+        if v and getgenv().theme_set ~= nil then
+            Library.Theme = tostring(getgenv().theme_set);
+        else
+            Library.Theme = "Default";
+        end;
+    end;
+    Flag = "theme_set";
+})
+
+local AliveSelected = Sections.Farming:CreateDropdown({
+    Text = "Select Mob";
+    Subtext = "";
+    Alignment = "Left";
+    Choices = config.FARM.mobs;
+    Multi = true;
+    Callback = function(val)  
+        config.FARM.selected_mobs = val;
+    end;
+    Flag = "alive_selected";
+});
+
+getgenv().farming = false;
+getgenv().farmLoopRunning = false;
+local AliveSelected_Farm = Sections.Farming:CreateToggle({
+    Text = "Auto Farm Mob",
+    Alignment = "Left",
+    Default = false,
+    Callback = function(val)
+        getgenv().farming = val;
+
+            task.spawn(function()
+                    while getgenv().farming do
+                    runservice.Heartbeat:Wait()
+                    local target = Lineage:GetTarget()
+
+                    if target then
+                        Lineage:teleportToMob(target)
+                        Lineage:M1()
+                    else
+                    task.wait(0.3);
+                end;
+            end;
+        end)
+    end,
+    Flag = "auto_farm_mobs",
+})
+
+local Abilities_Selected = Sections.Automatic:CreateDropdown({
+    Text = "Select Ability";
+    Subtext = "";
+    Alignment = "Left";
+    Choices = {"E", "R", "Z", "X", "C", "V"};
+    Multi = true;
+    Callback = function(val)
+        config.FARM.abilities.selected = val;
+    end;
+    Flag = "ability_selected";
+})
+
+getgenv().use_ability = false;
+local AbilityUse = Sections.Automatic:CreateToggle({
+    Text = "Use Ability";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(val)
+        getgenv().use_ability = val;
+
+        if val then
+            task.spawn(function()
+                while getgenv().use_ability do
+                    task.wait(.1)
+                    if (getgenv().farming or getgenv().boss_farming) or getgenv().auto_raid_farm then
+                        task.wait(.5);
+                        local controller = workspace.Live[client.Name].client_character_controller;
+                        for _,ability in pairs(config.FARM.abilities.selected or {}) do
+                            controller.Skill:FireServer(ability,true);
+                        end;
+                    else
+                        break;
+                    end;
+                end;
+            end);
+        end;
+    end;
+    Flag = "use_ability";
+});
+
+getgenv().collecting = false;
+getgenv().hop_delay = 3;
+local timeout = getgenv().hop_delay or math.random(3,5);
+local AutoCollect = Sections.Items:CreateToggle({
+    Text = "Collect Items";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(val)
+        getgenv().collecting = val;
+
+        if val then
+            task.spawn(function()
+                while getgenv().collecting do
+                    task.wait(.5);
+                    if Lineage:ItemsExist() then
+                        Lineage:CollectItems()
+                    else
+                        if getgenv().hopping and getgenv().collecting then
+                            Library:Notify("No items found! Server Hopping in " .. tostring(timeout) .. "(s)",timeout,"Notification!");
+                            task.wait(timeout);
+                            Lineage:ServerHop()
+                            break;
+                        end;
+                    end;
+                end;
+            end);
+        end;
+    end;
+    Flag = "collect_items";
+})
+
+local Rejoin = Sections.Items:CreateButton({
+    Text = "Rejoin";
+    Alignment = "Center"; 
+    Callback = function() 
+        task.spawn(function()Lineage:Rejoin()end)
+    end;
+});
+
+getgenv().hopping = false;
+local ServerHop = Sections.Items:CreateToggle({
+    Text = "Server Hop";
+    Subtext = "use when collecting items, hops when no item is found",
+    Alignment = "Left";
+    Default = false;
+    Callback = function(val)
+        getgenv().hopping = val;
+    end;
+    Flag = "serverhop";
+});
+
+local ServerHop_Delay = Sections.Items:CreateSlider({
+    Text = "Hop Delay";
+    Alignment = "Left";
+    Default = getgenv().hop_delay;
+    Callback = function(val)
+        getgenv().hop_delay = val;
+    end;
+    Flag = "hop_delay";
+    Floats = 0; 
+    Limits = { 1, 10 }; 
+    Increment = 1;
+})
+
+local TeleportMethod = Sections.Farming_Settings:CreateDropdown({
+    Text = "Teleport Position";
+    Subtext = "set your method";
+    Alignment = "Left";
+    Choices = {"Behind", "Below", "Above"};
+    Default = "Below";
+    Multi = false;
+    Callback = function(val)
+        config.FARM.teleport.mode = val;
+    end;
+    Flag = "teleport_pos";
+})
+
+local TeleportOffset = Sections.Farming_Settings:CreateSlider({
+    Text = "Offset";
+    Alignment = "Left";
+    Default = 9;
+    Callback = function(val)
+        config.FARM.teleport.offset = val;
+    end;
+    Flag = "teleport_offset";
+    Floats = 0; 
+    Limits = { 1, 15 }; 
+    Increment = 1;
+})
+
+local FarmBoss_Selected = Sections.Farming_Boss:CreateDropdown({
+    Text = "Select Boss";
+    Subtext = "";
+    Alignment = "Left";
+    Choices = config.FARM.bosses;
+    Default = "None";
+    Multi = false;
+    Callback = function(val)
+       config.FARM.selected_boss = val;
+    end;
+    Flag = "selected_boss";
+})
+
+getgenv().boss_farming = false;
+local FarmBoss = Sections.Farming_Boss:CreateToggle({
+    Text = "Auto Farm Boss";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(val)
+       getgenv().boss_farming = val
+
+        if val then
+            task.spawn(function()
+                while getgenv().boss_farming do
+                    runservice.Heartbeat:Wait()
+
+                    local target = Lineage:GetTarget();
+                    if target and config.FARM.selected_boss then
+                        local nameClean = target.Name:gsub("%s+", "");
+                        local cleanBoss = config.FARM.selected_boss:gsub("%s+", "");
+
+                        if nameClean:find(cleanBoss) then
+                            Lineage:teleportToMob(target)
+                            Lineage:M1()
+                        end;
+                    else
+                        task.wait(0.3);
+                    end;
+                end;
+            end);
+        end;
+    end;
+    Flag = "autofarm_boss"
+});
+
+local AutoLoad = Sections.UI_Controls:CreateToggle({
+    Text = "Auto Load";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(val)
+        getgenv().load = val;
+        
+        if getgenv().load then 
+            local que = queue_on_teleport or queue_on_teleport();
+
+            if not que then 
+                print("executor does not support this feature");
+                return false;
+            end;
+
+            if que then
+                que('loadstring(game:HttpGet("https://raw.githubusercontent.com/sodawas/Lotus/refs/heads/main/Games/2840520567012685"))()')
+            end;
+        end;
+    end;
+    Flag = "auto_load"
+});
+
+local AutoQuestline = Sections.Farming_Story:CreateToggle({
+    Text = "Auto Story",
+    Default = false,
+    Callback = function(val)
+        getgenv().auto_story = val
+
+        print("[UI] Auto Story:", val)
+
+        if val then
+            Lineage:StartAutoStory()
+        else
+            Lineage:StopStory()
+        end
+    end
+})
+
+local AutoRaid_Selection = Sections.Raid:CreateDropdown({
+    Text = "Select Raid";
+    Subtext = "";
+    Alignment = "Left";
+    Choices = config.RAID.bosses;
+    Default = "None";
+    Multi = false;
+    Callback = function(val)
+        config.RAID.selected = val;
+    end;
+    Flag = "selected_raid";
+});
+
+local AutoRaid = Sections.Raid:CreateToggle({
+    Text = "Auto Raid Farm";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(val)
+        getgenv().auto_raid_farm = val
+
+        if val then
+            getgenv().raidFarming = false
+            task.wait(0.1)
+            Lineage:StartRaidFarm()
+        else
+            getgenv().raidFarming = false 
+        end
+    end;
+    Flag = "auto_raid";
+});
+
+local AutoRaid_Join = Sections.Raid:CreateToggle({
+    Text = "Auto Join Raid";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(val)
+        getgenv().auto_join_raid = val;
+        
+        if val then
+            Lineage:AutoJoinRaid();
+        end;
+    end;
+    Flag = "auto_join_raid";
+});
+
+local AutoRaid_Replay = Sections.Raid:CreateToggle({
+    Text = "Auto Replay";
+    Subtext = "";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(val)
+        getgenv().replay = val;
+    end;
+    Flag = "auto_replay";
+});
+
+local Choose_Stand = Sections.Stand:CreateDropdown({
+    Text = "Stands";
+    Subtext = "";
+    Alignment = "Left";
+    Choices = config.STAND.stands;
+    Multi = true;
+    Default = {};
+    Callback = function(val)
+        config.STAND.selected_stands = val or {};
+    end;
+    Flag = "stand_choosen";
+})
+
+local Choose_Trait_Rarity = Sections.Stand:CreateDropdown({
+    Text = "Trait Rarity";
+    Subtext = "";
+    Alignment = "Left";
+    Choices = config.STAND.trait_rarity;
+    Multi = true;
+    Default = {};
+    Callback = function(val)
+        config.STAND.selected_trait_rarity = val or {};
+    end;
+    Flag = "trait_rarity_choosen";
+})
+
+local Choose_Trait_Name = Sections.Stand:CreateDropdown({
+    Text = "Trait Names";
+    Subtext = "";
+    Alignment = "Left";
+    Choices = config.STAND.trait_names;
+    Multi = true;
+    Default = {};
+    Callback = function(val)
+        config.STAND.selected_trait_names = val or {};
+    end;
+    Flag = "trait_name_choosen";
+})
+
+local Choose_Skin_Rarity = Sections.Stand:CreateDropdown({
+    Text = "Skin Rarity";
+    Subtext = "";
+    Alignment = "Left";
+    Choices = config.STAND.skin_rarity;
+    Multi = true;
+    Default = {};
+    Callback = function(val)
+        config.STAND.selected_skin_rarity = val or {};
+    end;
+    Flag = "desired_skin_rarity";
+})
+
+local Config_Mode = Sections.Stand:CreateDropdown({
+    Text = "Config Mode";
+    Subtext = "Any = one enough All = all match";
+    Alignment = "Left";
+    Choices = {"Any", "All"};
+    Multi = false;
+    Default = "Any";
+    Callback = function(val)
+        config.STAND.config_mode = val;
+    end;
+    Flag = "config_mode";
+})
+
+local StandFarmToggle; StandFarmToggle = Sections.Stand:CreateToggle({
+    Text = "Stand Farm";
+    Subtext = "Automatically uses Stand Arrow + checks your filters";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(val)
+        config.STAND.enabled = val;
+
+        if val then
+            Lineage:StartStandFarm();
+        else
+            getgenv().standFarming = false;
+        end;
+    end;
+    Flag = "stand_farm";
+})
+
+local Stand_Farm_Keybind = Sections.Stand:CreateKeybind({
+    Text = "Stand Farm Keybind";
+    Subtext = "Press L to toggle Stand Farm on/off";
+    Alignment = "Left";
+    Default = "L";
+    Callback = function(state)
+        if StandFarmToggle then
+            StandFarmToggle:SetValue(state);
+        end
+
+        config.STAND.enabled = state;
+        getgenv().standFarming = state;
+
+        if state then
+            Lineage:StartStandFarm();
+            Library:Notify("Stand Farm → ENABLED", 3, "Stand Farm");
+        else
+            Library:Notify("Stand Farm → DISABLED", 3, "Stand Farm");
+        end;
+    end;
+    Flag = "stand_farm_keybind";
+})
+
+local Stat_Information = Sections.Stats:CreateLabel({
+    Text = "Stat Table in Order: { Strength, Speed, Specialty }\nLeave Stat Combo blank to disable stat filtering entirely";
+    Alignment = "Left"; 
+})
+
+local Stat_Information_2 = Sections.Stats:CreateLabel({
+    Text = "exact → position matters   {S,S,A} = Str:S Spd:S Spe:A only\nany   → position ignored   {S,S,A} = any two S's + one A";
+    Alignment = "Left"; 
+})
+
+local Stat_Combo = Sections.Stats:CreateInput({
+    Text = "Stats";
+    Subtext = "Example: S,S,A  or  S,S,S";
+    Alignment = "Left";
+    Default = "";
+    Placeholder = "S,S,A";
+    Callback = function(val)
+        local combo = {};
+        for num in val:gmatch("[%w]+") do
+            table.insert(combo, num:upper());
+        end;
+        config.STAND.stat_combo = {combo}
+    end;
+    Flag = "stat_combo";
+})
+
+local Stat_Match_Mode = Sections.Stats:CreateDropdown({
+    Text = "Stat Mode";
+    Subtext = "";
+    Alignment = "Left";
+    Choices = {"Any", "Exact"};
+    Multi = false;
+    Default = "Any";
+    Callback = function(val)
+        config.STAND.stat_mode = val;
+    end;
+    Flag = "stat_mode";
+})
+
+local Webhook_URL = Sections.Webhook:CreateInput({
+    Text = "Webhook URL",
+    Subtext = "Paste your Discord webhook here",
+    Alignment = "Left",
+    Default = "",
+    Placeholder = "https://discord.com/api/webhooks/...",
+    Callback = function(val)
+        config.WEBHOOK.url = val;
+    end,
+    Flag = "webhook_url"
+})
+
+local Webhook_Stand = Sections.Webhook:CreateToggle({
+    Text = "Stand Notifications",
+    Subtext = "Send webhook when a good stand is found",
+    Alignment = "Left",
+    Default = false,
+    Callback = function(val)
+        config.WEBHOOK.stand = val;
+    end,
+    Flag = "webhook_stand"
+})
+
+local Webhook_Raid = Sections.Webhook:CreateToggle({
+    Text = "Raid Notifications",
+    Subtext = "Send webhook on raid events (coming soon)",
+    Alignment = "Left",
+    Default = false,
+    Callback = function(val)
+        config.WEBHOOK.raid = val;
+    end,
+    Flag = "webhook_raid"
+})
+
+local Webhook_Enabled = Sections.Webhook:CreateToggle({
+    Text = "Enable Webhook",
+    Alignment = "Left",
+    Default = false,
+    Callback = function(val)
+        config.WEBHOOK.enabled = val;
+    end,
+    Flag = "webhook_enabled"
+})
+
+local Webhook_Test = Sections.Webhook:CreateButton({
+    Text = "Send Test Webhook",
+    Alignment = "Center",
+    Callback = function()
+        local ok = Lineage:Send_Webhook({
+            content = "hi from Lotus :p"
+        });
+
+        if ok then
+            Library:Notify("Webhook sent", 3, "Notification!");
+        else
+            Library:Notify("Webhook failed", 3, "Notification!");
+        end;
+    end;
+})
+
+local Codes_Redeem; Codes_Redeem = Sections.Other_Misc:CreateButton({ 
+    Text = "Redeem Codes", 
+    Callback = function()
+        local event = game:GetService("ReplicatedStorage").requests.general.redeemcode;
+        local get_codes = config.CODES;
+
+        for i, code in next, get_codes do
+            task.wait(math.random(1, 2));
+            event:FireServer(tostring(code));
+        end;
+end});
+
+local Boss_Name_Esp = Sections.Boss_Esp:CreateToggle({
+    Text = "Boss Name",
+    Default = false,
+    Callback = function(v)
+        ESPSettings.Boss.Name.Enabled = v
+    end
+})
+
+local Boss_Highlight_Esp = Sections.Boss_Esp:CreateToggle({
+    Text = "Boss Highlight",
+    Default = false,
+    Callback = function(v)
+        ESPSettings.Boss.Aura.Enabled = v
+    end
+})
+
+local Item_Name_Esp = Sections.Item_Esp:CreateToggle({
+    Text = "Item Name",
+    Default = false,
+    Callback = function(v)
+        ESPSettings.Item.Name.Enabled = v
+    end
+})
+
+local Item_Highlight_Esp = Sections.Item_Esp:CreateToggle({
+    Text = "Item Highlight",
+    Default = false,
+    Callback = function(v)
+        ESPSettings.Item.Aura.Enabled = v
+    end
+})
+
+local Player_Name_Esp = Sections.Players_Esp:CreateToggle({
+    Text = "Player Name",
+    Default = false,
+    Callback = function(v)
+        ESPSettings.Player.Name.Enabled = v
+    end
+})
+
+local Player_Skeleton_Esp = Sections.Players_Esp:CreateToggle({
+    Text = "Player Skeleton",
+    Default = false,
+    Callback = function(v)
+        ESPSettings.Player.Skeleton.Enabled = v
+    end
+})
+
+local HideName = Sections.Other_Misc:CreateToggle({
+    Text = "Hide Name";
+    Subtext = "Hides your name on the leaderboard";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(val)
+        Lineage:HideName(val);
+    end;
+    Flag = "hide_name";
+});
+
+getgenv().auto_sell = false;
+local AutoSell = Sections.Items_Sell:CreateToggle({
+    Text = "Auto Sell";
+    Subtext = "Sells all unlocked items";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(val)
+        getgenv().auto_sell = val;
+
+        if val then
+            task.spawn(function()
+                while getgenv().auto_sell do
+                    Lineage:AutoSell();
+                    task.wait(3);
+                end;
+            end);
+        end;
+    end;
+    Flag = "auto_sell";
+});
+
+getgenv().auto_chest = false;
+local AutoChest = Sections.Chests:CreateToggle({
+    Text = "Auto Open Chest";
+    Subtext = "Opens every Chest";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(val)
+        getgenv().auto_chest = val;
+
+        if val then
+            task.spawn(function()
+                while getgenv().auto_chest do
+                    Lineage:AutoOpenChest();
+                    task.wait(3);
+                end;
+            end);
+        end;
+    end;
+    Flag = "auto_chest";
+});
+
+local pvpTarget = nil;
+getgenv().pvp_farming = false;
+
+local Players_Dropdown = Sections.Pvp:CreateDropdown({
+    Text = "Select Player";
+    Subtext = "";
+    Alignment = "Left";
+    Choices = (function()
+        local names = {};
+        for _, plr in ipairs(players:GetPlayers()) do
+            if plr ~= client then
+                table.insert(names, plr.Name);
+            end;
+        end;
+        return names;
+    end)();
+    Multi = false;
+    Default = "None";
+    Callback = function(val)
+        pvpTarget = val;
+    end;
+    Flag = "pvp_target";
+});
+
+local Players_Refresh = Sections.Pvp:CreateButton({
+    Text = "Refresh Players";
+    Alignment = "Left";
+    Callback = function()
+        local names = {};
+        for _, plr in ipairs(players:GetPlayers()) do
+            if plr ~= client then
+                table.insert(names, plr.Name);
+            end;
+        end;
+        Players_Dropdown:SetChoices(names);
+        Library:Notify("Players refreshed", 2, "PvP");
+    end;
+});
+
+local function getPvpTarget()
+    if not pvpTarget or pvpTarget == "None" then return nil end;
+    local plr = players:FindFirstChild(pvpTarget);
+    if not plr or not plr.Character then return nil end;
+    local root = plr.Character:FindFirstChild("HumanoidRootPart");
+    if not root then return nil end;
+    return plr.Character;
+end;
+
+local function teleportToPvpTarget(char)
+    if not char or not humanoidrootpart then return end;
+    local root = char:FindFirstChild("HumanoidRootPart");
+    if not root then return end;
+
+    local mode = config.FARM.teleport.mode;
+    local offset = config.FARM.teleport.offset;
+    local targetPosition;
+
+    if mode == "Behind" then
+        targetPosition = root.Position + (root.CFrame.LookVector * -offset);
+    elseif mode == "Below" then
+        targetPosition = root.Position - Vector3.new(0, offset, 0);
+    elseif mode == "Above" then
+        targetPosition = root.Position + Vector3.new(0, offset, 0);
+    else
+        targetPosition = root.Position + (root.CFrame.LookVector * -offset);
+    end;
+
+    humanoidrootpart.CFrame = CFrame.new(targetPosition, root.Position);
+end;
+
+local Pvp_TeleportMethod = Sections.Pvp:CreateDropdown({
+    Text = "Teleport Position";
+    Subtext = "nutzt Farm Config Einstellungen";
+    Alignment = "Left";
+    Choices = {"Behind", "Below", "Above"};
+    Default = config.FARM.teleport.mode or "Behind";
+    Multi = false;
+    Callback = function(val)
+        config.FARM.teleport.mode = val;
+    end;
+    Flag = "pvp_teleport_pos";
+});
+
+local Pvp_Offset = Sections.Pvp:CreateSlider({
+    Text = "Offset";
+    Alignment = "Left";
+    Default = config.FARM.teleport.offset or 5;
+    Callback = function(val)
+        config.FARM.teleport.offset = val;
+    end;
+    Flag = "pvp_teleport_offset";
+    Floats = 0;
+    Limits = { 1, 15 };
+    Increment = 1;
+});
+
+local Pvp_TeleportOnce = Sections.Pvp:CreateButton({
+    Text = "Teleport to Player";
+    Alignment = "Left";
+    Callback = function()
+        local char = getPvpTarget();
+        if char then
+            teleportToPvpTarget(char);
+            Library:Notify("Teleported to " .. tostring(pvpTarget), 2, "PvP");
+        else
+            Library:Notify("Player not found!", 2, "PvP");
+        end;
+    end;
+});
+
+local Pvp_AutoTarget = Sections.Pvp:CreateToggle({
+    Text = "Auto Kill";
+    Subtext = "";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(val)
+        getgenv().pvp_tp_loop = val;
+
+        if val then
+            task.spawn(function()
+                while getgenv().pvp_tp_loop do
+                    runservice.Heartbeat:Wait();
+                    local char = getPvpTarget();
+                    if char then
+                        local root = char:FindFirstChild("HumanoidRootPart");
+                        if root and humanoidrootpart then
+                            local mode = config.FARM.teleport.mode;
+                            local offset = config.FARM.teleport.offset;
+                            local targetPosition;
+
+                            if mode == "Behind" then
+                                targetPosition = root.Position + (root.CFrame.LookVector * -offset);
+                            elseif mode == "Below" then
+                                targetPosition = root.Position - Vector3.new(0, offset, 0);
+                            elseif mode == "Above" then
+                                targetPosition = root.Position + Vector3.new(0, offset, 0);
+                            else
+                                targetPosition = root.Position - Vector3.new(0, offset, 0);
+                            end;
+
+                            humanoidrootpart.CFrame = CFrame.new(targetPosition, root.Position);
+                            Lineage:EnableStand();
+                            Lineage:M1();
+                        end;
+                    else
+                        task.wait(0.3);
+                    end;
+                end;
+            end);
+        end;
+    end;
+    Flag = "pvp_tp_loop";
+});
+
+local Pvp_UseAbility = Sections.Pvp:CreateToggle({
+    Text = "Use Abilities";
+    Subtext = "config in farm tab";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(val)
+        getgenv().pvp_ability = val;
+
+        if val then
+            task.spawn(function()
+                while getgenv().pvp_ability do
+                    task.wait(0.5);
+                    if getgenv().pvp_tp_loop then
+                        local controller = workspace.Live[client.Name] and
+                            workspace.Live[client.Name]:FindFirstChild("client_character_controller");
+                        if controller then
+                            for _, ability in pairs(config.FARM.abilities.selected or {}) do
+                                controller.Skill:FireServer(ability, true);
+                            end;
+                        end;
+                    end;
+                end;
+            end);
+        end;
+    end;
+    Flag = "pvp_use_ability";
+});
+
+
+Library.Paths = {
+    ["Folder"] = "Lotus",
+    ["Secondary"] = tostring(game.PlaceId),
+    ["Data"] = "Data",
+    ["Themes"] = "Themes",
+};
+
+Library:Notify("Loaded Lotus for\n".. tostring(Bizzare:getGame()) .. "\nwith Build: ".. tostring("Testing"), 10, "Notification!");
+Bizzare:Entry();
+Bizzare:LoadBlacklist();
+Bizzare:ProcessBlacklistTimes();
+Bizzare:CheckBlacklist();
+
+--(( Load Config;
+Library:Load()
+
