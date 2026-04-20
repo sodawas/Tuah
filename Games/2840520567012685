@@ -2453,16 +2453,17 @@ local AutoLoad = Sections.UI_Controls:CreateToggle({
         getgenv().load = val;
         
         if getgenv().load then 
-            local que = queue_on_teleport or queue_on_teleport();
+            local que = queue_on_teleport
 
             if not que then 
                 print("executor does not support this feature");
                 return false;
             end;
 
-            if que then
-                que('loadstring(game:HttpGet("https://raw.githubusercontent.com/sodawas/Lotus/refs/heads/main/Games/2840520567012685"))()')
-            end;
+            queueonteleport([[
+                    loadstring(game:HttpGet("https://raw.githubusercontent.com/sodawas/Lotus/refs/heads/main/Games/2840520567012685"))()
+                ]])
+            
         end;
     end;
     Flag = "auto_load"
