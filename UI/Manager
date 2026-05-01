@@ -1,7 +1,6 @@
 -- Functions
 
 local Setup, Called = {}, {};
-
 Setup["Basics"] = function(self)
     if Called["Basics"] then return; end;
     Called["Basics"] = true; 
@@ -41,12 +40,38 @@ Setup["ClientController"] = function(self)
     if Called["ClientController"] then return Called["ClientController"]; end;
     Called["ClientController"] = Manager;
 
+    local Loop = self:Loop();
     self:Basics();
 
     function Manager:Reset()
-        if char then
-            char:BreakJoints();
+        if replicatesignal then
+            replicatesignal(Client.Kill);
+        elseif Humanoid then
+            Humanoid:ChangeState(Enum.HumanoidStateType.Dead);
+        elseif Character then
+            Character:BreakJoints();
         end;
+    end;
+
+    local Start, Last;
+    function Manager:NoFall()
+        task.spawn(function()
+            Last = os.clock();
+            if not Start then
+                Start = os.clock();
+                local NoFall = Instance.new("BodyVelocity");
+                NoFall.MaxForce = vector.create(math.huge, math.huge, math.huge);
+                NoFall.Velocity = vector.zero;
+                NoFall.Parent = HRP;
+    
+                while Character and Character.Parent and os.clock()-Last<=1 do
+                    task.wait();
+                end;
+    
+                NoFall:Destroy();
+                Start=nil;
+            end;
+        end);
     end;
 
     function Manager:Goto(cf)
@@ -69,18 +94,12 @@ Setup["ClientController"] = function(self)
         end,
 
         TW = function(self, Toggle)
-            if self.TWX then
-                self.TWX:Disconnect();
-            end;
-
-            if Toggle then
-                self.TWX = rsv.RenderStepped:Connect(function()
-                    if hum.MoveDirection.Magnitude > 0 then
-                        walkspeed = walkspeed or 1;
-                        char:TranslateBy(hum.MoveDirection * walkspeed)
-                    end;
-                end);
-            end;
+            Loop("Heartbeat", "TPWALK", Toggle, function(dt)
+                if hum.MoveDirection.Magnitude > 0 then
+                    walkspeed = walkspeed or 1;
+                    char:TranslateBy(hum.MoveDirection * walkspeed * dt)
+                end;
+            end)
         end,
 
         -- Jump
@@ -95,6 +114,7 @@ Setup["ClientController"] = function(self)
             if self.IJX then
                 self.IJX:Disconnect();
                 self.IJX2:Disconnect();
+                Loop("Heartbeat", "INFJUMP", false, {jump, .025})
             end;
 
             if Toggle then
@@ -106,20 +126,15 @@ Setup["ClientController"] = function(self)
                 end;
 
                 local function on()
-                    Pressing = true;
-
-                    while Pressing do
-                        jump();
-                        task.wait(.1);
-                    end;
+                    Loop("Heartbeat", "INFJUMP", true, jump)
                 end;
 
                 local function off()
-                    Pressing = false;
+                    Loop("Heartbeat", "INFJUMP", false, jump)
                 end;
 
                 self.IJX = Recorder:Bind("Space", on);
-                self.IJX = Recorder:Bind("Space", off, true);
+                self.IJX2 = Recorder:Bind("Space", off, true);
             end;
         end,
     };
@@ -187,16 +202,11 @@ Setup["File"] = function(self)
     function Manager:Write(path, contents)
         if not Allowed then return; end;
         if typeof(path) ~= 'string' then return; end;
-    
+
         local contents = contents or "";
-    
-        local executor = identifyexecutor and identifyexecutor() or "f"
-        print("Saving on", executor)
-        print("Attempting to write to", path)
-    
-        writefile(path, tostring(contents))
-    end
-    
+
+        writefile(path, tostring(contents));
+    end;
 
     function Manager:CreateFolder(path)
         if not Allowed then return; end;
@@ -236,65 +246,212 @@ Setup["Tween"] = function(self)
     if Called["Tween"] then return Called["Tween"]; end;
     Called["Tween"] = Manager;
 
+    local Controller = Setup:ClientController();
     self:Basics();
 
-    function Manager:Create(pos, speed, nofall, extra, delayY)
-        if (typeof(pos) ~= "CFrame") or (not hrp) then
-            if Storage['CurrentTween'] then Storage['CurrentTween']:Pause(); end; return;
-        end;
+    function Manager:Create(Data)
+        if not Data or not Data.Position then return end
 
-        if (not char) or (not hrp) then return; end;
+        -- Always reuse active tween
+        if Storage.Active then
+            local Active = Storage.Active
+            Active:ChangeSpeed(Data.Speed)
 
-        local isClose = false;
-        local cf, vec3 = pos, pos.Position;
+            -- Update the target position for moving mobs
+            Active.Data.Position = Data.Position
+            Active.Data.Continue = Data.Continue
 
-        if delayY then
-            cf = CFrame.new(pos.X, hrp.Position.Y, pos.Z);
-            vec3 = cf.Position;
-        end;
+            local isClose = Active.isClose();
+            if Data.Extra then
+                Data.Extra(isClose)
+            end
 
-        local speed = speed or 5;
-        local distance = (hrp.Position - vec3).magnitude;
+            return isClose
+        end
 
-        if nofall then
-            if Storage["No Fall INS"] then
-                Storage["No Fall INS"]:Destroy();
+        local Temporary = nil
+        local function Move(dt)
+            local Active = Storage.Active;
+            local Data = (Active and Active.Data) or Data;
+            
+            local Target = Data.Position
+            local CF
+            if typeof(Target) == "CFrame" then
+                CF = Target
+                Target = Target.Position
+            else
+                CF = CFrame.new(Target);
+            end
+
+            local Speed = Data.Speed or {24, 24}
+            if typeof(Speed) ~= "table" then
+                Speed = {Speed, Speed}
+            end
+
+            local Surf = Data.Surf
+
+            local p1 = HRP.Position
+            local p2 = Temporary or Target
+
+            if p2.Y < p1.Y then
+                Speed[2] = 9999999999;
             end;
 
-            Storage["No Fall INS"] = Instance.new('BodyVelocity');
-            Storage["No Fall INS"].MaxForce = Vector3.new(math.huge, math.huge, math.huge);
-            Storage["No Fall INS"].Velocity = Vector3.new(0, 0, 0);
-            Storage["No Fall INS"].Parent = hrp;
-        end;
+            local baseX, baseY = Speed[1], Speed[2]
+            local stepX = baseX * dt
+            local stepY = baseY * dt
 
-        if distance <= speed / 5 then
-            isClose = true;
-            hrp.CFrame = pos;
-        end;
+            local xDiff = Vector3.new(p2.X - p1.X, 0, p2.Z - p1.Z)
+            local yDiff = Vector3.new(0, p2.Y - p1.Y, 0)
 
-        if typeof(extra) == "function" then
-            task.spawn(extra, isClose);
-        end;
+            local xDis = xDiff.Magnitude
+            local yDis = math.abs(yDiff.Y)
 
-        local Time = distance / speed;
-        Storage['CurrentTween'] = TweenService:Create(hrp,
-            TweenInfo.new(Time, Enum.EasingStyle.Linear), { CFrame = cf });
-        Storage['CurrentTween']:Play();
+            stepX = math.min(stepX, xDis)
+            stepY = math.min(stepY, yDis)
 
+            local xDir = xDis > 0 and xDiff.Unit or Vector3.zero
+            local yDir = yDis > 0 and yDiff.Unit or Vector3.zero
 
-        return isClose;
+            -- Arrival check
+            if xDis <= math.max(stepX, 1) and yDis <= math.max(stepY, 1) then
+                if p2 == Target then
+                    HRP.CFrame = CF;
+                    Controller:NoFall();
+
+                    if Data.Extra then
+                        Data.Extra(true)
+                    end
+
+                    if not Data.Continue and Active then
+                        Active:Cancel()
+                    end;
+
+                    return;
+                else
+                    HRP.CFrame = CFrame.new(p2)
+                    Temporary = nil
+                end
+            end
+
+            -- Surf logic
+            if Surf and xDis > stepX then
+                local Params = RaycastParams.new()
+                Params.FilterDescendantsInstances = {Character}
+                Params.FilterType = Enum.RaycastFilterType.Blacklist
+                Params.RespectCanCollide = true
+                Params.IgnoreWater = true
+
+                local rayOrigin = p1 - Vector3.new(0, HRP.Size.Y / 2, 0)
+                local rayDir = xDir * math.max(stepX, 4)
+
+                local Hit = workspace:Raycast(rayOrigin, rayDir, Params);
+
+                if Hit then
+                    local Part = Hit.Instance
+                    local Top = Hit.Position.Y
+                    
+                    local diff = Top - p1.Y
+
+                    if diff <= math.max(stepY, 1) then
+                        HRP.CFrame = CFrame.new(p1.X, Top + 1, p1.Z)
+                    else
+                        Temporary = Vector3.new(Hit.Position.X, Top + 1, Hit.Position.Z) - xDir * 2
+                    end
+                else
+                    local Under = workspace:Raycast(p1 + vector.create(0, 10, 0), Vector3.new(0, -100, 0), Params)
+                    local Above = 2;
+
+                    if Under then
+                        if Data.Floor then
+                            if p1.Y > Data.Floor then
+                                Above += math.max(0, Data.Floor - Under.Position.Y);
+                            end;
+                        end;
+                        HRP.CFrame = CFrame.new(Under.Position + Vector3.new(0, Above, 0))
+                    end
+                end
+            end
+
+            -- Recalculate after surf adjustments
+            p1 = HRP.Position
+            p2 = Temporary or Target
+
+            xDiff = Vector3.new(p2.X - p1.X, 0, p2.Z - p1.Z)
+            yDiff = Vector3.new(0, p2.Y - p1.Y, 0)
+
+            xDis = xDiff.Magnitude
+            yDis = math.abs(yDiff.Y)
+
+            xDir = xDis > 0 and xDiff.Unit or Vector3.zero
+            yDir = yDis > 0 and yDiff.Unit or Vector3.zero
+
+            local Translation
+            if Surf and xDis > math.max(stepX, 1) then
+                Translation = xDir * math.min(stepX, xDis)
+            else
+                Translation =
+                    xDir * math.min(stepX, xDis) +
+                    yDir * math.min(stepY, yDis)
+            end
+
+            Controller:NoFall()
+            HRP.CFrame += Translation
+        end
+
+        Storage.Active = {
+            Connection = RSV.Heartbeat:Connect(Move),
+
+            Cancel = function(self)
+                if self.Connection then
+                    self.Connection:Disconnect()
+                end
+                Storage.Active = nil
+            end,
+
+            ChangeSpeed = function(self, New)
+                if not New then return end
+                self.Data.Speed = typeof(New) == "table" and New or {New, New}
+            end,
+
+            isClose = function()
+                local p = HRP.Position
+                local t = Storage.Active.Data.Position
+                t = typeof(t) == "CFrame" and t.Position or t
+                local dx = Vector3.new(t.X - p.X, 0, t.Z - p.Z).Magnitude
+                local dy = math.abs(t.Y - p.Y)
+
+                local speed = Storage.Active.Data.Speed;
+                if speed then
+                    local sX = (typeof(speed)=="number" and speed) or speed[1];
+                    local sY = (typeof(speed)=="number" and speed) or speed[2];
+
+                    return dx <= math.max(sX/100, 1) and dy <= math.max(sY/100, 1);
+                end;
+            end,
+
+            Data = Data
+        }
+
+        return Storage.Active.isClose();
+    end
+
+    function Manager:GetActive()
+        return Storage["Active"];
     end;
 
     function Manager:Cancel()
-        if Storage["No Fall INS"] then Storage["No Fall INS"]:Destroy(); end;
-        if Storage['CurrentTween'] then Storage['CurrentTween']:Pause(); end;
+        local Active = self:GetActive();
+        if Active then 
+            Active:Cancel();
+        end;
     end;
 
     return Manager;
 end;
 
 Setup["VirtualInputManager"] = function(self)
-    local Manager, VIM = {}, game:GetService("VirtualInputManager");
+    local Manager, VIM = {}, Instance.new("VirtualInputManager");
     if Called["VirtualInputManager"] then return Called["VirtualInputManager"]; end;
     Called["VirtualInputManager"] = Manager;
 
@@ -313,12 +470,12 @@ Setup["VirtualInputManager"] = function(self)
     end;
 
     function Manager:Click(mb)
-        if typeof(MB) == 'number' then
+        if typeof(mb) == 'number' then
             mb = math.clamp(mb, 0, 2);
 
-            VIM:SendMouseButtonEvent(0, 0, mb, true, game);
+            VIM:SendMouseButtonEvent(0, 0, mb, true, game, 1);
             task.wait();
-            VIM:SendMouseButtonEvent(0, 0, mb, false, game);
+            VIM:SendMouseButtonEvent(0, 0, mb, false, game, 1);
         end;
     end;
 
@@ -329,6 +486,9 @@ Setup["VirtualInputManager"] = function(self)
             if not EnumKey then return; end;
 
             VIM:SendKeyEvent(true, EnumKey, false, game);
+        elseif typeof(Key) == 'number' then
+            local mb = math.clamp(Key, 0, 2);
+            VIM:SendMouseButtonEvent(0, 0, mb, true, game, 1);
         end;
     end;
 
@@ -339,6 +499,9 @@ Setup["VirtualInputManager"] = function(self)
             if not EnumKey then return; end;
 
             VIM:SendKeyEvent(false, EnumKey, false, game);
+        elseif typeof(Key) == 'number' then
+            local mb = math.clamp(Key, 0, 2);
+            VIM:SendMouseButtonEvent(0, 0, mb, false, game, 1);
         end;
     end;
 
@@ -461,6 +624,158 @@ Setup["InputRecorder"] = function(self)
             end;
         end;
     end);
+
+    return Manager;
+end;
+
+Setup["Hooking"] = function(self)
+    local Manager = {};
+    if Called["Hooking"] then return Called["Hooking"]; end;
+    Called["Hooking"] = Manager;
+
+    local Hooks = {};
+    local function AttemptHook(Instance, Method, ...)
+        local Hook = Hooks[Instance];
+        if Hook and Hook[1] == Method then
+            return Hook[2](...) or nil;
+        end;
+    end;
+
+    function Manager.Add(Instance, Method, Response)
+        if Hooks[Instance] then return; end;
+        return pcall(function() Hooks[Instance] = {Method, Response} end);
+    end;
+
+    function Manager.Remove(Instance)
+        return pcall(function() Hooks[Instance] = nil; end);
+    end;
+
+    function Manager.Exists(Instance)
+        return Hooks[Instance] ~= nil;
+    end;
+
+    local old;
+    old = hookmetamethod(game, "__namecall", function(self, ...)
+        if not checkcaller() then
+            local Response = AttemptHook(self, getnamecallmethod(), ...); -- 0 = Return, 
+            if Response == 0 then return; end;
+        end;
+
+        return old(self, ...);
+    end);
+
+    return Manager;
+end;
+
+Setup["Maid"] = function(self)
+    local Manager = {};
+    if Called["Maid"] then return Called["Maid"]; end;
+    Called["Maid"] = Manager;
+
+    function Manager.new()
+        local Maid = {
+            Tasks = {};
+        }
+        function Maid:GiveTask(task)
+            table.insert(self.Tasks, task);
+        end;
+
+        function Maid:DoCleaning()
+            for _, task in ipairs(self.Tasks) do
+                if typeof(task) == "RBXScriptConnection" then
+                    task:Disconnect();
+                elseif typeof(task) == "Instance" then
+                    task:Destroy();
+                elseif type(task) == "function" then
+                    task();
+                end;
+            end;
+
+            table.clear(self.Tasks);
+        end;
+        
+        return Maid;
+    end;
+
+    return Manager;
+end;
+
+Setup["Loop"] = function(self)
+    local Manager = {};
+    if Called["Loop"] then return Called["Loop"]; end;
+    Called["Loop"] = Manager;
+    Setup:Basics();
+    
+    local Connections; Connections = {
+        Heartbeat = {
+            List = {};
+            History = { };
+
+            _Connection = RSV.Heartbeat:Connect(function(dt)
+                local Self = Connections.Heartbeat;
+                for i, v in pairs(Self.List) do
+                    if typeof(v) == "table" then
+                        local f, t = table.unpack(v);
+
+                        local p = Self.History[i];
+                        if p then
+                            if os.time()-p < t then return; end;
+                        end;
+
+                        Self.History[i] = os.time();
+                        task.spawn(f, dt);
+                    else
+                        task.spawn(v, dt);
+                    end;
+                end;
+            end);
+        };
+
+        RenderStepped = {
+            List = {};
+            History = { };
+
+            _Connection = RSV.RenderStepped:Connect(function(dt)
+                local Self = Connections.RenderStepped;
+                for _, v in pairs(Self.List) do
+                    if typeof(v) == "table" then
+                        local f, t = table.unpack(v);
+                        
+                        local p = Self.History[i];
+                        if p then
+                            if os.time()-p < t then return; end;
+                        end;
+
+                        Self.History[i] = os.time();
+                        task.spawn(f, dt);
+                    else
+                        task.spawn(v, dt);
+                    end;
+                end;
+            end);
+        };
+    };
+
+    local Storage = {};
+    setmetatable(Manager, {
+        __call = function(self, Connection, Key, Value, Data)
+            local ct = Connections[Connection];
+            if not ct then return warn("Invalid Loop Connection"); end;
+
+            if Value then
+                ct.List[Key] = Data;
+            else
+                ct.List[Key] = nil;
+            end;
+        end;
+    });
+
+    function Manager.Kill()
+        for _, v in pairs(Connections) do 
+            v._Connection:Disconnect();
+            Called["Loop"] = nil;
+        end;
+    end;
 
     return Manager;
 end;
