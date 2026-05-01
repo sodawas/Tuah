@@ -2403,8 +2403,8 @@ local Save; Save = Sections.Save:CreateButton({
     Text = "Save Config",
     Alignment = "Left",
     Callback = function()
-        Library:Save()
-        Library:Notify("Saved Config", 3, "Lotus")
+        Library:Save();
+        Library:Notify("Config Saved", 3, "Notification")
     end,
 })
 
@@ -2670,28 +2670,23 @@ local FarmBoss = Sections.Farming_Boss:CreateToggle({
     Flag = "autofarm_boss"
 });
 
-local AutoLoad = Sections.UI_Controls:CreateToggle({
+local AutoLoad_New = Sections.UI_Controls:CreateToggle({
     Text = "Auto Load";
+    Subtext = "";
     Alignment = "Left";
     Default = false;
     Callback = function(val)
-        getgenv().load = val;
-        
-        if getgenv().load then 
+        if val then
             local q = queueonteleport or queue_on_teleport;
-
-            if not q then 
-                print("executor does not support this feature");
-                return false;
+            if not q then
+                return;
             end;
-
             q([[
-                    loadstring(game:HttpGet("https://raw.githubusercontent.com/sodawas/Lotus/refs/heads/main/Games/2840520567012685"))()
-                ]])
-            
+                loadstring(game:HttpGet("https://raw.githubusercontent.com/sodawas/Tuah/refs/heads/main/Games/79546208627805"))()
+            ]]);
         end;
     end;
-    Flag = "auto_load"
+    Flag = "auto_load_new";
 });
 
 local AutoQuestline = Sections.Farming_Story:CreateToggle({
@@ -3480,7 +3475,6 @@ function Library:Save()
     end
     
     writefile(path, game:GetService("HttpService"):JSONEncode(data))
-    Library:Notify("Config Saved", 3, "Notification")
 end
 
 function Library:Load()
