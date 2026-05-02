@@ -202,39 +202,52 @@ do -- Hidden
 
     function Library:Save()
         local Paths = Library.Paths;
-        local Folder, Secondary = Paths["Folder"], Paths["Secondary"];
-        FileService:CreateFolder(Folder);
+        local Folder = Paths["Folder"];
+        local Secondary = Paths["Secondary"];
+        local DataName = Paths["Data"] or "Data";
+
+        if not isfolder(Folder) then makefolder(Folder) end;
+
+        local FullPath = Folder;
         if Secondary then
-            Folder = ("\\" .. Folder .. "\\" .. Secondary); FileService:CreateFolder(Folder);
+            FullPath = Folder .. "/" .. Secondary;
+            if not isfolder(FullPath) then makefolder(FullPath) end;
         end;
 
-        local Path = Folder .. "\\" .. Library.Paths["Data"] .. ".json";
-
+        local Path = FullPath .. "/" .. DataName .. ".json";
         local SaveData = {};
+
         for i, v in pairs(self.Created.Flags) do
-            if v.Value then
+            if v.Value ~= nil then
                 SaveData[i] = v.Value;
             end;
         end;
 
-        FileService:Write(Path, HttpService:JSONEncode(SaveData))
+        writefile(Path, HttpService:JSONEncode(SaveData));
     end;
 
     function Library:Load()
         local Paths = Library.Paths;
-        local Folder, Secondary = Paths["Folder"], Paths["Secondary"];
-        FileService:CreateFolder(Folder);
+        local Folder = Paths["Folder"];
+        local Secondary = Paths["Secondary"];
+        local DataName = Paths["Data"] or "Data";
+
+        local FullPath = Folder;
         if Secondary then
-            Folder = ("\\" .. Folder .. "\\" .. Secondary); FileService:CreateFolder(Folder);
+            FullPath = Folder .. "/" .. Secondary;
         end;
 
-        local Path = Folder .. "\\" .. Library.Paths["Data"] .. ".json";
+        local Path = FullPath .. "/" .. DataName .. ".json";
 
-        local LoadData = FileService:Read(Path);
-        if not LoadData then return; end;
+        if not isfile(Path) then return end;
 
-        LoadData = HttpService:JSONDecode(LoadData);
-        for i, v in pairs(LoadData) do
+        local Raw = readfile(Path);
+        if not Raw or Raw == "" then return end;
+
+        local ok, data = pcall(HttpService.JSONDecode, HttpService, Raw);
+        if not ok or type(data) ~= "table" then return end;
+
+        for i, v in pairs(data) do
             if Library.Created.Flags[i] then
                 Library.Created.Flags[i]:Load(v);
             end;
@@ -245,9 +258,9 @@ do -- Hidden
         if not File then return; end;
 
         local Paths = Library.Paths;
-        local Folder, Secondary = Paths["Folder"], "\\External\\";
+        local Folder, Secondary = Paths["Folder"], "\\External";
         FileService:CreateFolder(Folder);
-        Folder = ("\\" .. Folder .. Secondary); FileService:CreateFolder(Folder);
+        Folder = (Folder .. Secondary); FileService:CreateFolder(Folder);
 
         local Path = Folder .. tostring(File) .. ".json";
         FileService:Write(Path, HttpService:JSONEncode(Data));
@@ -257,9 +270,9 @@ do -- Hidden
         if not File then return; end;
 
         local Paths = Library.Paths;
-        local Folder, Secondary = Paths["Folder"], "\\External\\";
+        local Folder, Secondary = Paths["Folder"], "\\External";
         FileService:CreateFolder(Folder);
-        Folder = ("\\" .. Folder .. Secondary); FileService:CreateFolder(Folder);
+        Folder = (Folder .. Secondary); FileService:CreateFolder(Folder);
 
         local Path = Folder .. tostring(File) .. ".json";
         local LoadData = FileService:Read(Path);
@@ -532,7 +545,6 @@ local SubFunctions; SubFunctions = {
             Parent = ParentUI,
             Size = UDim2.new(1, 0, 0, (isSetting and 15) or 25),
             BackgroundTransparency = 1,
-            ZIndex = ParentUI.ZIndex,
         });
 
         local Label = Library.Create("TextLabel", {
@@ -542,7 +554,6 @@ local SubFunctions; SubFunctions = {
             Text = nself.Text,
             TextXAlignment = (nself.Alignment and Enum.TextXAlignment[nself.Alignment]) or
                 Enum.TextXAlignment.Center,
-            ZIndex = ParentUI.ZIndex,
         }, { FontFace = "Font", TextColor3 = "Text" });
 
         Library:ApplyTextSize(Label, (isSetting and 14) or 18);
@@ -585,7 +596,6 @@ local SubFunctions; SubFunctions = {
         local Background = Library.Create("Frame", {
             Parent = ParentUI,
             Size = UDim2.new(1, 0, 0, (isSetting and 15) or 25),
-            ZIndex = ParentUI.ZIndex,
         }, { BackgroundColor3 = "Background2" });
 
         local Stroke = Library:ApplyStroke(Background, "Accent1", 1, "Round");
@@ -595,7 +605,6 @@ local SubFunctions; SubFunctions = {
             Parent = Background,
             Size = UDim2.new(1, 0, 1, 0),
             BackgroundTransparency = 1,
-            ZIndex = ParentUI.ZIndex,
         }, { FontFace = "Font", TextColor3 = "Text" });
 
         Library:ApplyTextSize(Label, (isSetting and 11) or 15);
@@ -631,12 +640,11 @@ local SubFunctions; SubFunctions = {
         Update();
 
         local SubUI;
-        local Connections = {}
         function nself:AssignSub(Sub)
             local SettingsUI = Sub.BackUI;
             SubUI = Sub;
-
-            Connections[6] = InputService:Bind({ "MouseButton1", "MouseButton2" }, function()
+            
+            InputService:Bind({ "MouseButton1", "MouseButton2" }, function()
                 local n = MouseInBounds(SettingsUI.AbsolutePosition, SettingsUI.AbsoluteSize);
                 Sub.Visibility((n and SettingsUI.Visible) or false)
             end, false, true);
@@ -645,39 +653,33 @@ local SubFunctions; SubFunctions = {
         -- Mouse Actions
         local Click = Library:ApplyClick(Background);
 
-        Connections[1] = Click.MouseEnter:Connect(function()
+        Click.MouseEnter:Connect(function()
             Library:Register(Background, { BackgroundColor3 = "Background" }, true);
             Library:Register(Stroke, { Color = "Hover" }, true);
         end);
 
-        Connections[2] = Click.MouseLeave:Connect(function()
+        Click.MouseLeave:Connect(function()
             Library:Register(Background, { BackgroundColor3 = "Background2" }, true);
             Library:Register(Stroke, { Color = "Accent1" }, true);
         end);
 
-        Connections[3] = Click.MouseButton1Down:Connect(function()
+        Click.MouseButton1Down:Connect(function()
             Library:Register(Background, { BackgroundColor3 = "Background" }, true);
             Library:Register(Stroke, { Color = "Selected" }, true);
         end);
 
-        Connections[4] = Click.MouseButton1Up:Connect(function()
+        Click.MouseButton1Up:Connect(function()
             nself:Fire();
             Library:Register(Background, { BackgroundColor3 = "Background" }, true);
             Library:Register(Stroke, { Color = "Hover" }, true);
         end);
 
-        Connections[5] = Click.MouseButton2Up:Connect(function()
+        Click.MouseButton2Up:Connect(function()
             if SubUI then
                 SubUI.Visibility(true);
                 SubUI.Move(UDim2.new(0, Mouse.X, 0, Mouse.Y));
             end;
         end);
-
-        local oldDestroy = self.Destroy;
-        self.Destroy = function()
-            for _, v in pairs(Connections) do v:Disconnect(); end;
-            oldDestroy();
-        end;
 
         return nself;
     end,
@@ -706,14 +708,13 @@ local SubFunctions; SubFunctions = {
             Parent = ParentUI,
             Size = UDim2.new(1, 0, 0, (isSetting and 20) or 30),
             BackgroundTransparency = 1,
-            ZIndex = ParentUI.ZIndex,
+            ZIndex = 31; --bsbsbsb
         });
 
         local Title = Library.Create("TextLabel", {
             Parent = Background,
             Size = UDim2.new(.75, 0, (nself.Subtext == "" and 1) or .5, 0),
             BackgroundTransparency = 1,
-            ZIndex = ParentUI.ZIndex,
 
         }, { FontFace = "Font", TextColor3 = "Text" });
 
@@ -730,7 +731,6 @@ local SubFunctions; SubFunctions = {
             Size = UDim2.new(.75, 0, .5, 0),
             Position = UDim2.new(0, 0, 1, 0),
             BackgroundTransparency = 1,
-            ZIndex = ParentUI.ZIndex,
         }, { FontFace = "Font", TextColor3 = "Subtext" });
 
         Library:ApplyTextSize(Description, (isSetting and 10) or 14);
@@ -746,7 +746,6 @@ local SubFunctions; SubFunctions = {
             AnchorPoint = Vector2.new(1, .5),
             Position = UDim2.new(1, 0, .5, 0),
             Size = UDim2.new(1, 0, .66, 0),
-            ZIndex = ParentUI.ZIndex,
         }, { BackgroundColor3 = "Background2" });
 
         Library:ApplyRatio(Slider, 2, "Height");
@@ -758,7 +757,6 @@ local SubFunctions; SubFunctions = {
             AnchorPoint = Vector2.new(0, .5),
             Position = UDim2.new(.1, 0, .5, 0),
             Size = UDim2.new(.4, 0, .8, 0),
-            ZIndex = ParentUI.ZIndex,
         }, { BackgroundColor3 = "Text" });
 
         Library:ApplyCorner(Circle, 10);
@@ -807,12 +805,11 @@ local SubFunctions; SubFunctions = {
         end;
 
         local SubUI;
-        local Connections = {};
         function nself:AssignSub(Sub)
             local SettingsUI = Sub.BackUI;
             SubUI = Sub;
-
-            Connections[3] = InputService:Bind({ "MouseButton1", "MouseButton2" }, function()
+            
+            InputService:Bind({ "MouseButton1", "MouseButton2" }, function()
                 local n = MouseInBounds(SettingsUI.AbsolutePosition, SettingsUI.AbsoluteSize);
                 Sub.Visibility((n and SettingsUI.Visible) or false)
             end, false, true);
@@ -826,20 +823,13 @@ local SubFunctions; SubFunctions = {
         Update();
 
         local Click = Library:ApplyClick(Background);
-
-        Connections[1] = Click.MouseButton1Up:Connect(Build(nself.Switch, nself));
-        Connections[2] = Click.MouseButton2Up:Connect(function()
+        Click.MouseButton1Up:Connect(Build(nself.Switch, nself));
+        Click.MouseButton2Up:Connect(function()
             if SubUI then
                 SubUI.Visibility(true);
                 SubUI.Move(UDim2.new(0, Mouse.X, 0, Mouse.Y));
             end;
         end);
-
-        local oldDestroy = self.Destroy;
-        self.Destroy = function()
-            for _, v in pairs(Connections) do v:Disconnect(); end;
-            oldDestroy();
-        end;
 
         return nself;
     end,
@@ -868,14 +858,12 @@ local SubFunctions; SubFunctions = {
             Parent = ParentUI,
             Size = UDim2.new(1, 0, 0, (isSetting and 20) or 30),
             BackgroundTransparency = 1,
-            ZIndex = ParentUI.ZIndex,
         });
 
         local Title = Library.Create("TextLabel", {
             Parent = Background,
             Size = UDim2.new(.75, 0, (nself.Subtext == "" and 1) or .5, 0),
             BackgroundTransparency = 1,
-            ZIndex = ParentUI.ZIndex,
         }, { FontFace = "Font", TextColor3 = "Text" });
 
         Library:ApplyTextSize(Title, (isSetting and 12) or 16);
@@ -891,7 +879,7 @@ local SubFunctions; SubFunctions = {
             Size = UDim2.new(.75, 0, .5, 0),
             Position = UDim2.new(0, 0, 1, 0),
             BackgroundTransparency = 1,
-            ZIndex = ParentUI.ZIndex,
+
         }, { FontFace = "Font", TextColor3 = "Subtext" });
 
         Library:ApplyTextSize(Description, (isSetting and 10) or 14);
@@ -907,7 +895,6 @@ local SubFunctions; SubFunctions = {
             Position = UDim2.new(1, 0, .5, 0),
             Size = UDim2.new(.1, 0, .75, 0),
             AutomaticSize = Enum.AutomaticSize.X,
-            ZIndex = ParentUI.ZIndex,
         }, { BackgroundColor3 = "Background2" });
 
         Library:ApplyCorner(Subframe, 4);
@@ -922,7 +909,6 @@ local SubFunctions; SubFunctions = {
             Text = nself.Value or "",
             AutomaticSize = Enum.AutomaticSize.X,
             RichText = true,
-            ZIndex = ParentUI.ZIndex,
         }, { FontFace = "Font", TextColor3 = "Text" });
 
         -- Functions
@@ -1002,12 +988,11 @@ local SubFunctions; SubFunctions = {
         end;
 
         local SubUI;
-        local Connections = {};
         function nself:AssignSub(Sub)
             local SettingsUI = Sub.BackUI;
             SubUI = Sub;
-
-            Connections[3] = InputService:Bind({ "MouseButton1", "MouseButton2" }, function()
+            
+            InputService:Bind({ "MouseButton1", "MouseButton2" }, function()
                 local n = MouseInBounds(SettingsUI.AbsolutePosition, SettingsUI.AbsoluteSize);
                 Sub.Visibility((n and SettingsUI.Visible) or false)
             end, false, true);
@@ -1019,20 +1004,13 @@ local SubFunctions; SubFunctions = {
         nself:SetKey(nself.Default);
 
         local Click = Library:ApplyClick(Background);
-
-        Connections[1] = Click.MouseButton1Up:Connect(nself.Start);
-        Connections[2] = Click.MouseButton2Up:Connect(function()
+        Click.MouseButton1Up:Connect(nself.Start);
+        Click.MouseButton2Up:Connect(function()
             if SubUI then
                 SubUI.Visibility(true);
                 SubUI.Move(UDim2.new(0, Mouse.X, 0, Mouse.Y));
             end;
         end);
-
-        local oldDestroy = self.Destroy;
-        self.Destroy = function()
-            for _, v in pairs(Connections) do v:Disconnect(); end;
-            oldDestroy();
-        end;
 
         return nself;
     end,
@@ -1065,19 +1043,18 @@ local SubFunctions; SubFunctions = {
             Parent = ParentUI,
             Size = UDim2.new(1, 0, 0, (isSetting and 20) or 30),
             BackgroundTransparency = 1,
-            ZIndex = ParentUI.ZIndex,
         });
 
         local Title = Library.Create("TextLabel", {
             Parent = Background,
             Size = UDim2.new(.75, 0, (nself.Subtext == "" and 1) or .5, 0),
             BackgroundTransparency = 1,
-            ZIndex = ParentUI.ZIndex,
+
         }, { FontFace = "Font", TextColor3 = "Text" });
 
         Library:ApplyTextSize(Title, (isSetting and 12) or 16);
         Library.Create("UIPadding", {
-            Parent = Background,
+            Parent = Title,
             PaddingLeft = UDim.new(0, 7),
             PaddingRight = UDim.new(0, 7),
         });
@@ -1087,7 +1064,6 @@ local SubFunctions; SubFunctions = {
             AnchorPoint = Vector2.new(1, 0),
             Position = UDim2.new(1, 0, 0, 0),
             Size = UDim2.new(.2, 0, .5, 0),
-            ZIndex = ParentUI.ZIndex,
         }, { BackgroundColor3 = "Background2" });
 
         Library:ApplyCorner(Subframe, 4);
@@ -1098,7 +1074,6 @@ local SubFunctions; SubFunctions = {
             BackgroundTransparency = 1,
             Size = UDim2.new(1, 0, 1, 0),
             Text = tostring(nself.Value),
-            ZIndex = ParentUI.ZIndex,
         }, { FontFace = "Font", TextColor3 = "Text" });
 
         Library:ApplyTextSize(ValueBox, 14);
@@ -1108,7 +1083,7 @@ local SubFunctions; SubFunctions = {
             AnchorPoint = Vector2.new(.5, 1),
             Position = UDim2.new(.5, 0, 1, 0),
             Size = UDim2.new(1, 0, .185, 0),
-            ZIndex = ParentUI.ZIndex,
+
         }, { BackgroundColor3 = "Tone" });
 
         Library:ApplyCorner(Slider_Back, 10);
@@ -1117,7 +1092,6 @@ local SubFunctions; SubFunctions = {
         local Slider_Fill = Library.Create("Frame", {
             Parent = Slider_Back,
             Size = UDim2.new(0, 0, 1, 0),
-            ZIndex = ParentUI.ZIndex,
         }, { BackgroundColor3 = "Highlight" });
 
         Library:ApplyCorner(Slider_Fill, 10);
@@ -1127,12 +1101,13 @@ local SubFunctions; SubFunctions = {
             AnchorPoint = Vector2.new(1, .5),
             Size = UDim2.new(1, 0, 1.85, 0),
             Position = UDim2.new(1, 0, .5, 0),
-            ZIndex = ParentUI.ZIndex,
         }, { BackgroundColor3 = "Text" });
 
         Library:ApplyCorner(SliderCircle, 10);
         Library:ApplyRatio(SliderCircle, 1, "Height", true);
 
+        local Click = Library:ApplyClick(Slider_Back);
+        Click.ZIndex = 2;
         local isSliding = false;
 
         local function Update()
@@ -1196,12 +1171,11 @@ local SubFunctions; SubFunctions = {
         end;
 
         local SubUI;
-        local Connections = {};
         function nself:AssignSub(Sub)
             local SettingsUI = Sub.BackUI;
             SubUI = Sub;
-
-            Connections[4] = InputService:Bind({ "MouseButton1", "MouseButton2" }, function()
+            
+            InputService:Bind({ "MouseButton1", "MouseButton2" }, function()
                 local n = MouseInBounds(SettingsUI.AbsolutePosition, SettingsUI.AbsoluteSize);
                 Sub.Visibility((n and SettingsUI.Visible) or false)
             end, false, true);
@@ -1216,24 +1190,14 @@ local SubFunctions; SubFunctions = {
             nself:SetValue(BoxVal);
         end);
 
-        local Click = Library:ApplyClick(Slider_Back);
-        Click.ZIndex = ParentUI.ZIndex + 1;
-
-        Connections[1] = Click.MouseButton1Down:Connect(Start);
-        Connections[2] = Click.MouseButton2Up:Connect(function()
+        Click.MouseButton1Down:Connect(Start);
+        Click.MouseButton2Up:Connect(function()
             if SubUI then
                 SubUI.Visibility(true);
                 SubUI.Move(UDim2.new(0, Mouse.X, 0, Mouse.Y));
             end;
         end);
-
-        Connections[3] = InputService:Bind("MouseButton1", End, true, true);
-
-        local oldDestroy = self.Destroy;
-        self.Destroy = function()
-            for _, v in pairs(Connections) do v:Disconnect(); end;
-            oldDestroy();
-        end;
+        InputService:Bind("MouseButton1", End, true, true);
 
         return nself;
     end,
@@ -1262,14 +1226,13 @@ local SubFunctions; SubFunctions = {
             Parent = ParentUI,
             Size = UDim2.new(1, 0, 0, (isSetting and 20) or 30),
             BackgroundTransparency = 1,
-            ZIndex = ParentUI.ZIndex,
         });
 
         local Title = Library.Create("TextLabel", {
             Parent = Background,
             Size = UDim2.new(.75, 0, (nself.Subtext == "" and 1) or .5, 0),
             BackgroundTransparency = 1,
-            ZIndex = ParentUI.ZIndex,
+
         }, { FontFace = "Font", TextColor3 = "Text" });
 
         Library:ApplyTextSize(Title, (isSetting and 12) or 16);
@@ -1285,7 +1248,7 @@ local SubFunctions; SubFunctions = {
             Size = UDim2.new(.75, 0, .5, 0),
             Position = UDim2.new(0, 0, 1, 0),
             BackgroundTransparency = 1,
-            ZIndex = ParentUI.ZIndex,
+
         }, { FontFace = "Font", TextColor3 = "Subtext" });
 
         Library:ApplyTextSize(Description, (isSetting and 10) or 14);
@@ -1301,7 +1264,6 @@ local SubFunctions; SubFunctions = {
             Position = UDim2.new(1, 0, .5, 0),
             Size = UDim2.new(.25, 0, .75, 0),
             ClipsDescendants = true,
-            ZIndex = ParentUI.ZIndex,
         }, { BackgroundColor3 = "Background2" });
 
         Library:ApplyCorner(Subframe, 4);
@@ -1318,7 +1280,6 @@ local SubFunctions; SubFunctions = {
             TextXAlignment = Enum.TextXAlignment.Left,
             ClearTextOnFocus = false,
             RichText = true,
-            ZIndex = ParentUI.ZIndex,
         }, { FontFace = "Font", TextColor3 = "Text" });
 
         Library.Create("UIPadding", {
@@ -1368,9 +1329,7 @@ local SubFunctions; SubFunctions = {
         nself:Fire();
         Update();
 
-        local Connections = {};
-
-        Connections[1] = ValueBox.Focused:Connect(function()
+        ValueBox.Focused:Connect(function()
             local Info = TweenInfo.new(.25, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut);
 
             TweenService:Create(Title, TweenInfo.new(.1), { TextTransparency = 1 }):Play();
@@ -1378,7 +1337,7 @@ local SubFunctions; SubFunctions = {
             TweenService:Create(Subframe, Info, { Size = UDim2.new(1, 0, .75, 0) }):Play();
         end);
 
-        Connections[2] = ValueBox.FocusLost:Connect(function()
+        ValueBox.FocusLost:Connect(function()
             local Info = TweenInfo.new(.1, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut);
 
             TweenService:Create(Title, TweenInfo.new(.2), { TextTransparency = 0 }):Play();
@@ -1416,14 +1375,13 @@ local SubFunctions; SubFunctions = {
             Parent = ParentUI,
             Size = UDim2.new(1, 0, 0, (isSetting and 20) or 30),
             BackgroundTransparency = 1,
-            ZIndex = ParentUI.ZIndex,
         });
 
         local Title = Library.Create("TextLabel", {
             Parent = Background,
             Size = UDim2.new(.75, 0, (nself.Subtext == "" and 1) or .5, 0),
             BackgroundTransparency = 1,
-            ZIndex = ParentUI.ZIndex,
+
         }, { FontFace = "Font", TextColor3 = "Text" });
 
         Library:ApplyTextSize(Title, (isSetting and 12) or 16);
@@ -1439,7 +1397,7 @@ local SubFunctions; SubFunctions = {
             Size = UDim2.new(.75, 0, .5, 0),
             Position = UDim2.new(0, 0, 1, 0),
             BackgroundTransparency = 1,
-            ZIndex = ParentUI.ZIndex,
+
         }, { FontFace = "Font", TextColor3 = "Subtext" });
 
         Library:ApplyTextSize(Description, (isSetting and 10) or 14);
@@ -1454,7 +1412,6 @@ local SubFunctions; SubFunctions = {
             AnchorPoint = Vector2.new(1, 0),
             Position = UDim2.new(1, 0, 0, 0),
             Size = UDim2.new(.4, 0, 1, 0),
-            ZIndex = ParentUI.ZIndex,
         }, { BackgroundColor3 = "Background2" });
 
         Library:ApplyCorner(Subframe, 6);
@@ -1468,8 +1425,7 @@ local SubFunctions; SubFunctions = {
         local Visuals = Library.Create("Frame", {
             Parent = Subframe,
             BackgroundTransparency = 1,
-            Size = UDim2.new(1, 0, 0, Subframe.AbsoluteSize.Y),
-            ZIndex = ParentUI.ZIndex,
+            Size = UDim2.new(1, 0, 0, 30),
         });
 
         local Circle = Library.Create("Frame", {
@@ -1477,7 +1433,6 @@ local SubFunctions; SubFunctions = {
             AnchorPoint = Vector2.new(1, .5),
             Position = UDim2.new(1, -2, .5, 0),
             Size = UDim2.new(0, 5, 0, 5),
-            ZIndex = ParentUI.ZIndex,
         }, { BackgroundColor3 = "Text" });
 
         Library:ApplyCorner(Circle, 100);
@@ -1490,7 +1445,6 @@ local SubFunctions; SubFunctions = {
             Text = "None",
             TextXAlignment = Enum.TextXAlignment.Left,
             ClipsDescendants = true,
-            ZIndex = ParentUI.ZIndex,
         }, { FontFace = "Font", TextColor3 = "Text" });
 
         local SearchBox = Library.Create("TextBox", {
@@ -1503,7 +1457,7 @@ local SubFunctions; SubFunctions = {
             TextXAlignment = Enum.TextXAlignment.Left,
             ClipsDescendants = true,
             Visible = false,
-            ZIndex = ParentUI.ZIndex + 10,
+            ZIndex = 10,
         }, { FontFace = "Font", TextColor3 = "Text" });
 
         Library.Create("UIPadding", {
@@ -1522,7 +1476,6 @@ local SubFunctions; SubFunctions = {
             CanvasSize = UDim2.new(0, 0, 0, 0),
             ScrollBarThickness = 1,
             Visible = false,
-            ZIndex = ParentUI.ZIndex,
         }, { ScrollBarImageColor3 = "Highlight" });
 
         Library:ApplyPadding(ItemHolder, 5);
@@ -1620,7 +1573,7 @@ local SubFunctions; SubFunctions = {
                 Parent = ItemHolder,
                 Size = UDim2.new(1, 0, 0, 20),
                 BackgroundTransparency = 1,
-                ZIndex = ParentUI.ZIndex + 11
+                ZIndex = 11
             });
 
             Library:ApplyCorner(OptionFrame, 4);
@@ -1629,13 +1582,13 @@ local SubFunctions; SubFunctions = {
                 BackgroundTransparency = 1,
                 Size = UDim2.new(1, 0, 1, 0),
                 Text = Option,
-                ZIndex = ParentUI.ZIndex + 11
+                ZIndex = 11
             }, { FontFace = "Font", TextColor3 = "Text" }), 10);
 
             Options[Option] = { OptionFrame, Library:ApplyStroke(OptionFrame, "Accent1", 1, "Round") };
 
             local OptionClick = Library:ApplyClick(OptionFrame);
-            OptionClick.ZIndex = ParentUI.ZIndex + 12;
+            OptionClick.ZIndex = 12;
             OptionClick.MouseButton1Up:Connect(function()
                 ToggleOption(Option);
             end);
@@ -1669,21 +1622,21 @@ local SubFunctions; SubFunctions = {
         nself.Load = nself.SetValue;
         nself:Fire();
         Update();
-
+        
         local SubUI;
-        local Connections = {};
         function nself:AssignSub(Sub)
             local SettingsUI = Sub.BackUI;
             SubUI = Sub;
-
-            Connections[5] = InputService:Bind({ "MouseButton1", "MouseButton2" }, function()
+            
+            InputService:Bind({ "MouseButton1", "MouseButton2" }, function()
                 local n = MouseInBounds(SettingsUI.AbsolutePosition, SettingsUI.AbsoluteSize);
                 Sub.Visibility((n and SettingsUI.Visible) or false)
             end, false, true);
         end;
 
         local Click = Library:ApplyClick(Background);
-        Connections[1] = SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
+
+        SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
             for Contents, Objects in pairs(Options) do
                 local l1, l2 = string.lower(SearchBox.Text), string.lower(Contents);
 
@@ -1691,12 +1644,11 @@ local SubFunctions; SubFunctions = {
             end;
         end);
 
-        local lastC = tick();
         local function Show()
-            Subframe.ZIndex = ParentUI.ZIndex + 10;
-            Circle.ZIndex = ParentUI.ZIndex + 10;
-            ValueLabel.ZIndex = ParentUI.ZIndex + 10;
-            ItemHolder.ZIndex = ParentUI.ZIndex + 10;
+            Subframe.ZIndex = 10;
+            Circle.ZIndex = 10;
+            ValueLabel.ZIndex = 10;
+            ItemHolder.ZIndex = 10;
 
             SearchBox.Visible = true;
             ValueLabel.Visible = false;
@@ -1709,10 +1661,10 @@ local SubFunctions; SubFunctions = {
         end;
 
         local function Hide()
-            Subframe.ZIndex = ParentUI.ZIndex;
-            Circle.ZIndex = ParentUI.ZIndex;
-            ValueLabel.ZIndex = ParentUI.ZIndex;
-            ItemHolder.ZIndex = ParentUI.ZIndex;
+            Subframe.ZIndex = 1;
+            Circle.ZIndex = 1;
+            ValueLabel.ZIndex = 1;
+            ItemHolder.ZIndex = 1;
 
             ItemHolder.Visible = false;
             SearchBox.Visible = false;
@@ -1725,44 +1677,27 @@ local SubFunctions; SubFunctions = {
         end;
 
         local Listing = false;
-        Connections[2] = Click.MouseButton1Up:Connect(function()
-            if not MouseInBounds(Subframe.AbsolutePosition, Subframe.AbsoluteSize) then
-                return;
-            end;
-
+        Click.MouseButton1Up:Connect(function()
             Listing = not Listing;
-
-            if lastC < tick() - .5 then
-                lastC = tick();
-                if Listing then
-                    Show();
-                else
-                    Hide();
-                end;
+            if Listing then
+                Show();
+            else
+                Hide();
             end;
         end);
 
-        Connections[3] = Click.MouseButton2Up:Connect(function()
+        Click.MouseButton2Up:Connect(function()
             if SubUI then
                 SubUI.Visibility(true);
                 SubUI.Move(UDim2.new(0, Mouse.X, 0, Mouse.Y));
             end;
         end);
 
-        Connections[4] = InputService:Bind({ "MouseButton1", "MouseButton2" }, function()
+        InputService:Bind({ "MouseButton1", "MouseButton2" }, function()
             if not MouseInBounds(Subframe.AbsolutePosition, Subframe.AbsoluteSize) then
-                if lastC < tick() - .5 then
-                    lastC = tick();
-                    Hide();
-                end;
+                Hide();
             end;
         end, true, true)
-
-        local oldDestroy = self.Destroy;
-        self.Destroy = function()
-            for _, v in pairs(Connections) do v:Disconnect(); end;
-            oldDestroy();
-        end;
 
         return nself;
     end,
@@ -1784,7 +1719,6 @@ local SubFunctions; SubFunctions = {
             AutomaticCanvasSize = Enum.AutomaticSize.Y,
             ScrollBarThickness = 1,
             CanvasSize = UDim2.new(0, 0, 0, 0),
-            ZIndex = ParentUI.ZIndex,
         });
 
         Library:ApplyStroke(Background, "Accent1", 1, "Round");
@@ -1800,13 +1734,12 @@ local SubFunctions; SubFunctions = {
             BackgroundTransparency = 1,
             Size = UDim2.new(1, 0, (isSetting and .2) or .3, 0),
             LayoutOrder = 999999,
-            ZIndex = ParentUI.ZIndex,
         });
 
         local function Update()
             local keys = {}
             for k in pairs(nself.Logs) do
-                table.insert(keys, k);
+              table.insert(keys, k);
             end;
 
             table.sort(keys);
@@ -1830,14 +1763,13 @@ local SubFunctions; SubFunctions = {
 
         local Entries = 1;
         function nself:AddEntry(Contents)
-            local eINFO = {};
+            local eINFO = { };
 
             local EF = Library.Create("Frame", {
                 Parent = Background,
                 BackgroundTransparency = 1,
                 Size = UDim2.new(1, 0, (isSetting and .2) or .3, 0),
-                Name = tostring(Entries),
-                ZIndex = ParentUI.ZIndex,
+                Name = tostring(Entries)
             });
 
             local EF_Desc = Library.Create("TextLabel", {
@@ -1847,8 +1779,6 @@ local SubFunctions; SubFunctions = {
                 Position = UDim2.new(1, 0, 0, 0),
                 Size = UDim2.new(1, 0, 1, 0),
                 Text = Contents or "",
-                ZIndex = ParentUI.ZIndex,
-                TextXAlignment = Enum.TextXAlignment.Left
             }, { FontFace = "Font", TextColor3 = "Text" });
 
             Library:ApplyTextSize(EF_Desc, 16);
@@ -1865,32 +1795,12 @@ local SubFunctions; SubFunctions = {
                 Position = UDim2.new(0, 0, 0, 0),
                 Size = UDim2.new(.1, 0, 1, 0),
                 TextSize = 16,
-                ZIndex = ParentUI.ZIndex,
             }, { FontFace = "Font", TextColor3 = "Text" });
 
-
-            local Connections = {};
             local cc = Entries;
-            local SubUI;
-            function eINFO:AssignSub(Sub)
-                local SettingsUI = Sub.BackUI;
-                SubUI = Sub;
-
-                Connections[2] = InputService:Bind({ "MouseButton1", "MouseButton2" }, function()
-                    local n = MouseInBounds(SettingsUI.AbsolutePosition, SettingsUI.AbsoluteSize);
-                    Sub.Visibility((n and SettingsUI.Visible) or false)
-                end, false, true);
-            end;
-
             eINFO.Destroy = function(self)
                 EF:Destroy();
                 nself.Logs[cc] = nil;
-
-                if SubUI then
-                    SubUI:Destroy();
-                end;
-
-                for _, v in pairs(Connections) do v:Disconnect(); end;
                 Update();
             end;
 
@@ -1898,18 +1808,7 @@ local SubFunctions; SubFunctions = {
             Entries = Entries + 1;
 
             Update();
-
-            if not isSetting then
-                Section:AddContent(Background, FullContents());
-            end;
-
-            local Click = Library:ApplyClick(EF);
-            Connections[1] = Click.MouseButton2Up:Connect(function()
-                if SubUI then
-                    SubUI.Visibility(true);
-                    SubUI.Move(UDim2.new(0, Mouse.X, 0, Mouse.Y));
-                end;
-            end);
+            Section:AddContent(Background, FullContents());
 
             return eINFO;
         end;
@@ -1923,16 +1822,13 @@ local SubFunctions; SubFunctions = {
                     local l1, l2 = string.lower(Contents), string.lower(Entry);
 
                     if l1 == l2 then
-                        v[1]:Destroy();
+                        v[1]:Destroy();    
                     end;
                 end;
             end;
 
             Update();
-
-            if not isSetting then
-                Section:AddContent(Background, FullContents());
-            end;
+            Section:AddContent(Background, FullContents());
         end;
 
         function nself:Clear()
@@ -1962,7 +1858,7 @@ function Library:Notify(Message, Duration, Title)
     if (not Message) or (not Library.ScreenUI) then return; end;
 
     Duration = Duration or 7.5;
-    Title = Title or "Notification!";
+    Title = Title or "Notificaiton!";
 
     local NotiUI;
     if not getgenv().NotiUI then
@@ -1988,14 +1884,14 @@ function Library:Notify(Message, Duration, Title)
     local Fake = Library.Create("Frame", {
         Parent = NotiUI,
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, 20),
+        Size = UDim2.new(1, 0, 0, 50),
         AutomaticSize = Enum.AutomaticSize.Y,
     });
 
     local NotiBack = Library.Create("Frame", {
         Parent = Fake,
         Position = UDim2.new(2, 0, 0, 0),
-        Size = UDim2.new(1, 0, 0, 20),
+        Size = UDim2.new(1, 0, 0, 50),
         AutomaticSize = Enum.AutomaticSize.Y,
     }, { BackgroundColor3 = "Background" });
 
@@ -2021,7 +1917,7 @@ function Library:Notify(Message, Duration, Title)
         AnchorPoint = Vector2.new(.5, 0),
         BackgroundTransparency = 1,
         Position = UDim2.new(.5, 0, 0, 10),
-        Size = UDim2.new(.9, 0, 0, 20),
+        Size = UDim2.new(.9, 0, 0, 50),
         AutomaticSize = Enum.AutomaticSize.Y,
     });
 
@@ -2033,7 +1929,7 @@ function Library:Notify(Message, Duration, Title)
     Library.Create("TextLabel", {
         Parent = Description,
         BackgroundTransparency = 1,
-        Size = UDim2.new(.9, 0, 0, 20),
+        Size = UDim2.new(.9, 0, 0, 50),
         AutomaticSize = Enum.AutomaticSize.Y,
         TextSize = 12,
         RichText = true,
@@ -2083,7 +1979,7 @@ function Library:Notify(Message, Duration, Title)
 end;
 
 function Library:CreateSubWindow(INFO)
-    local Settings = { isSetting = true };
+    local Settings = { isSub = true };
     INFO = INFO or {};
 
     Title = INFO.Title or "";
@@ -2118,11 +2014,10 @@ function Library:CreateSubWindow(INFO)
     Library:ApplyTextSize(Label, 16);
     Library:ApplyStroke(Background, "Accent1", 1, "Round");
 
-    local Full = (not Draggable and not INFO.Title)
     Settings.BackUI = Background;
     Settings.UI = Library.Create("ScrollingFrame", {
         Parent = Background,
-        Size = Size - ((not Full and UDim2.new(0, 0, 0, 25)) or UDim2.new(0, 0, 0, 0)),
+        Size = Size - UDim2.new(0, 0, 0, 25),
         Position = UDim2.new(0, 0, 1, 0),
         AnchorPoint = Vector2.new(0, 1),
         AutomaticCanvasSize = Enum.AutomaticSize.Y,
@@ -2153,12 +2048,6 @@ function Library:CreateSubWindow(INFO)
         Background.Visible = nv
     end;
 
-    Settings.Destroy = function(...)
-        Background:Destroy();
-        Settings = {};
-    end;
-
-
     setmetatable(Settings, { __index = SubFunctions })
     return Settings;
 end;
@@ -2167,7 +2056,8 @@ local MinSize, MaxSize = UDim2.new(0, 750, 0, 50), UDim2.new(0, 750, 0, 500);
 function Library:CreateWindow(WINFO)
     local Window = WINFO or {};
     Window.Title = Window.Title or "Window";
-    Window.Icon = Window.Icon or nil;
+    Window.Icon = Window.Image or "rbxassetid://106336924150777";
+    Window.Size = Window.Size or UDim2.new(1, 0, 1, 0)
     -- Window.Icon = { Image, Size } ; ImageID, UDim2 | Having a image will replace the title
 
     local Background = Library.Create("Frame", {
@@ -2404,16 +2294,17 @@ function Library:CreateWindow(WINFO)
         end;
     end;
 
-    if Window.Icon then
-        local Image, Size = table.unpack(Window.Icon);
+    if Window.Image and Window.Size then
+        local Image = Window.Image;
+        local Size = Window.Size;
 
         Library.Create("ImageLabel", {
             Parent = LeftTop,
             AnchorPoint = Vector2.new(.5, .5),
             BackgroundTransparency = 1,
             Position = UDim2.new(.5, 0, .5, 0),
-            Size = Size or UDim2.new(1, 0, 1, 0),
-            Image = Image or "rbxassetid://122142349354490",
+            Size = Window.Size or UDim2.new(1, 0, 1, 0),
+            Image = Window.Image or "rbxassetid://106336924150777",
         }, { ImageColor3 = "Title" });
     else
         Library:ApplyStroke(Library.Create("TextLabel", {
