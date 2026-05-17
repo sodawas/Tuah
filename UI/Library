@@ -789,9 +789,16 @@ local SubFunctions; SubFunctions = {
         end;
 
         nself.Switch = function(self) task.spawn(self.SetValue, self, not self.Value); end;
-        nself.Unload = function(self) task.spawn(self.SetValue, self); end;
+        nself.Unload = function(self)
+        nself.Value = false;
+        Update();
+        end;
         nself.Fire = function(self) task.spawn(self.Callback, self.Value); end;
-        nself.Load = nself.SetValue;
+        nself.Load = function(self, Value)
+            nself.Value = Value or false;
+            self.Callback(nself.Value);
+            Update();
+        end;
         nself:Fire();
         Update();
 
@@ -1178,7 +1185,12 @@ local SubFunctions; SubFunctions = {
         end;
 
         nself.Fire = function(self) task.spawn(self.Callback, self.Value); end;
-        nself.Load = nself.SetValue;
+        nself.LoadFire = function(self) self.Callback(self.Value); end; -- sync version
+        nself.Load = function(self, nv)
+            nself.Value = nv or false;
+            nself:LoadFire(); -- fires synchronously during load
+            Update();
+        end;
         Update();
 
         ValueBox.FocusLost:Connect(function()
@@ -1334,7 +1346,12 @@ local SubFunctions; SubFunctions = {
         end;
 
         nself.Fire = function(self) task.spawn(self.Callback, self.Value); end;
-        nself.Load = nself.SetValue;
+        nself.LoadFire = function(self) self.Callback(self.Value); end; -- sync version
+        nself.Load = function(self, nv)
+            nself.Value = nv or false;
+            nself:LoadFire(); -- fires synchronously during load
+            Update();
+        end;
         nself:Fire();
         Update();
 
@@ -1636,8 +1653,11 @@ local SubFunctions; SubFunctions = {
 
         nself.ClearDropdown = nself.SetOptions;
         nself.Fire = function(self) task.spawn(self.Callback, self.Value); end;
-        nself.Load = nself.SetValue;
-        nself:Fire();
+        nself.Load = function(self, Value)
+        nself.Value = Value or false;
+        self.Callback(self.Value);
+        Update();
+        end;
         Update();
 
         local SubUI;
