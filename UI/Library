@@ -48,7 +48,7 @@ local Library = {
             ["Text"] = RGB(220, 210, 255),
             ["Subtext"] = RGB(110, 95, 150),
             ["Icons"] = RGB(180, 150, 255),
-            ["Font"] = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Medium, Enum.FontStyle.Normal),
+            ["Font"] = Font.new("rbxasset://fonts/families/Arimo.json", Enum.FontWeight.Medium, Enum.FontStyle.Normal),
             ["NotiFont"] = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold, Enum.FontStyle.Normal),
         },
         ["Abyss"] = {
@@ -63,7 +63,7 @@ local Library = {
             ["Text"] = RGB(180, 215, 255),
             ["Subtext"] = RGB(70, 100, 150),
             ["Icons"] = RGB(100, 180, 255),
-            ["Font"] = Font.new("rbxasset://fonts/families/RobotoMono.json", Enum.FontWeight.Medium, Enum.FontStyle.Normal),
+            ["Font"] = Font.new("rbxasset://fonts/families/Arimo.json", Enum.FontWeight.Medium, Enum.FontStyle.Normal),
             ["NotiFont"] = Font.new("rbxasset://fonts/families/RobotoMono.json", Enum.FontWeight.Bold, Enum.FontStyle.Normal),
         },
         ["Ember"] = {
@@ -93,7 +93,7 @@ local Library = {
             ["Text"] = RGB(195, 230, 255),
             ["Subtext"] = RGB(80, 120, 155),
             ["Icons"] = RGB(150, 210, 245),
-            ["Font"] = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Medium, Enum.FontStyle.Normal),
+            ["Font"] = Font.new("rbxasset://fonts/families/Arimo.json", Enum.FontWeight.Medium, Enum.FontStyle.Normal),
             ["NotiFont"] = Font.new("rbxasset://fonts/families/GothamBlack.json", Enum.FontWeight.Bold, Enum.FontStyle.Normal),
         },
         ["Rose"] = {
@@ -108,7 +108,7 @@ local Library = {
             ["Text"] = RGB(255, 205, 220),
             ["Subtext"] = RGB(130, 75, 90),
             ["Icons"] = RGB(255, 165, 190),
-            ["Font"] = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Medium, Enum.FontStyle.Normal),
+            ["Font"] = Font.new("rbxasset://fonts/families/Arimo.json", Enum.FontWeight.Medium, Enum.FontStyle.Normal),
             ["NotiFont"] = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold, Enum.FontStyle.Normal),
         },
         ["Void"] = {
@@ -123,7 +123,7 @@ local Library = {
             ["Text"] = RGB(190, 255, 225),
             ["Subtext"] = RGB(70, 110, 85),
             ["Icons"] = RGB(130, 240, 180),
-            ["Font"] = Font.new("rbxasset://fonts/families/RobotoMono.json", Enum.FontWeight.Medium, Enum.FontStyle.Normal),
+            ["Font"] = Font.new("rbxasset://fonts/families/Arimo.json", Enum.FontWeight.Medium, Enum.FontStyle.Normal),
             ["NotiFont"] = Font.new("rbxasset://fonts/families/RobotoMono.json", Enum.FontWeight.Bold, Enum.FontStyle.Normal),
         },
         ["Sand"] = {
