@@ -1,4 +1,5 @@
 -- UI Remake
+print("v_new")
 
 local Repo = "https://raw.githubusercontent.com/8T1LiYuMh96vrfvMfqAvlPbi4dR2Hhx8yzE16dG";
 local Setup = loadstring(game:HttpGet(Repo .. "/vVoZlsyDgeOvBT90QbnXoFDQ/main/HsUTSb1JpEQZ"))();
@@ -1937,6 +1938,248 @@ local SubFunctions; SubFunctions = {
 
         return nself;
     end,
+
+    CreateColorPicker = function(self, INFO)
+    local ParentUI, isSetting = self.UI, self.isSetting;
+    if not ParentUI then return; end;
+
+    local nself = INFO or {};
+    nself.Text = nself.Text or "Color Picker";
+    nself.Subtext = nself.Subtext or "";
+    nself.Alignment = nself.Alignment or "Left";
+    nself.Default = nself.Default or Color3.fromRGB(121, 115, 234);
+    nself.ThemeKey = nself.ThemeKey or nil; -- z.b. "Highlight"
+    nself.Callback = nself.Callback or function(...) end;
+    nself.Flag = nself.Flag or nil;
+
+    nself.Value = nself.Default;
+
+    if nself.Flag then
+        Library.Created.Flags[nself.Flag] = nself;
+    end;
+
+    -- UI
+    local Background = Library.Create("Frame", {
+        Parent = ParentUI,
+        Size = UDim2.new(1, 0, 0, 30),
+        BackgroundTransparency = 1,
+        ZIndex = ParentUI.ZIndex,
+    });
+
+    local Title = Library.Create("TextLabel", {
+        Parent = Background,
+        Size = UDim2.new(.75, 0, (nself.Subtext == "" and 1) or .5, 0),
+        BackgroundTransparency = 1,
+        ZIndex = ParentUI.ZIndex,
+    }, { FontFace = "Font", TextColor3 = "Text" });
+
+    Library:ApplyTextSize(Title, 16);
+    Library.Create("UIPadding", {
+        Parent = Title,
+        PaddingLeft = UDim.new(0, 7),
+        PaddingRight = UDim.new(0, 7),
+    });
+
+    -- Color preview box
+    local Preview = Library.Create("Frame", {
+        Parent = Background,
+        AnchorPoint = Vector2.new(1, .5),
+        Position = UDim2.new(1, 0, .5, 0),
+        Size = UDim2.new(0, 24, 0, 18),
+        ZIndex = ParentUI.ZIndex,
+        BackgroundColor3 = nself.Value,
+    });
+
+    Library:ApplyCorner(Preview, 4);
+    Library:ApplyStroke(Preview, "Accent1", 1, "Round");
+
+    -- Picker popup
+    local Popup = Library.Create("Frame", {
+        Parent = ParentUI,
+        Size = UDim2.new(1, 0, 0, 110),
+        BackgroundTransparency = 1,
+        ZIndex = ParentUI.ZIndex,
+        Visible = false,
+    });
+
+    -- HSV Sliders container
+    local SliderContainer = Library.Create("Frame", {
+        Parent = Popup,
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        ZIndex = ParentUI.ZIndex,
+    });
+
+    Library.Create("UIListLayout", {
+        Parent = SliderContainer,
+        Padding = UDim.new(0, 5),
+    });
+
+    Library.Create("UIPadding", {
+        Parent = SliderContainer,
+        PaddingLeft = UDim.new(0, 7),
+        PaddingRight = UDim.new(0, 7),
+    });
+
+    local h, s, v = Color3.toHSV(nself.Value);
+
+    local function MakeHSVSlider(label, startVal)
+        local SF = Library.Create("Frame", {
+            Parent = SliderContainer,
+            Size = UDim2.new(1, 0, 0, 20),
+            BackgroundTransparency = 1,
+            ZIndex = ParentUI.ZIndex,
+        });
+
+        Library.Create("TextLabel", {
+            Parent = SF,
+            Size = UDim2.new(.12, 0, 1, 0),
+            BackgroundTransparency = 1,
+            Text = label,
+            TextSize = 11,
+            ZIndex = ParentUI.ZIndex,
+        }, { FontFace = "Font", TextColor3 = "Subtext" });
+
+        local Track = Library.Create("Frame", {
+            Parent = SF,
+            AnchorPoint = Vector2.new(1, .5),
+            Position = UDim2.new(1, 0, .5, 0),
+            Size = UDim2.new(.85, 0, .35, 0),
+            ZIndex = ParentUI.ZIndex,
+        }, { BackgroundColor3 = "Tone" });
+
+        Library:ApplyCorner(Track, 10);
+        Library:ApplyStroke(Track, "Accent1", 1, "Round");
+
+        local Fill = Library.Create("Frame", {
+            Parent = Track,
+            Size = UDim2.new(startVal, 0, 1, 0),
+            ZIndex = ParentUI.ZIndex,
+        }, { BackgroundColor3 = "Highlight" });
+
+        Library:ApplyCorner(Fill, 10);
+
+        local Knob = Library.Create("Frame", {
+            Parent = Fill,
+            AnchorPoint = Vector2.new(1, .5),
+            Position = UDim2.new(1, 0, .5, 0),
+            Size = UDim2.new(0, 8, 0, 8),
+            ZIndex = ParentUI.ZIndex,
+        }, { BackgroundColor3 = "Text" });
+
+        Library:ApplyCorner(Knob, 100);
+
+        local val = startVal;
+        local isSliding = false;
+
+        local Click = Library:ApplyClick(Track);
+        Click.ZIndex = ParentUI.ZIndex + 1;
+
+        Click.MouseButton1Down:Connect(function()
+            isSliding = true;
+            while isSliding do
+                local px = Track.AbsolutePosition.X;
+                local sx = Track.AbsoluteSize.X;
+                val = math.clamp((Mouse.X - px) / sx, 0, 1);
+                Fill.Size = UDim2.new(val, 0, 1, 0);
+                RunService.Heartbeat:Wait();
+            end;
+        end);
+
+        UserInputService.InputEnded:Connect(function(i)
+            if i.UserInputType == Enum.UserInputType.MouseButton1 then
+                isSliding = false;
+            end;
+        end);
+
+        return {
+            GetValue = function() return val; end,
+            SetValue = function(nv)
+                val = math.clamp(nv, 0, 1);
+                Fill.Size = UDim2.new(val, 0, 1, 0);
+            end,
+            Changed = function(cb)
+                RunService.Heartbeat:Connect(function()
+                    cb(val);
+                end);
+            end,
+            _Fill = Fill,
+        };
+    end;
+
+    local HSlider = MakeHSVSlider("H", h);
+    local SSlider = MakeHSVSlider("S", s);
+    local VSlider = MakeHSVSlider("V", v);
+
+    -- Live update
+    RunService.Heartbeat:Connect(function()
+        if not Popup.Visible then return; end;
+        local nh = HSlider.GetValue();
+        local ns = SSlider.GetValue();
+        local nv = VSlider.GetValue();
+        local color = Color3.fromHSV(nh, ns, nv);
+
+        if color ~= nself.Value then
+            nself.Value = color;
+            Preview.BackgroundColor3 = color;
+
+            if nself.ThemeKey then
+                Library.Themes["Custom"] = Library.Themes["Custom"] or {};
+                for k, v in pairs(Library.Themes["Default"]) do
+                    if not Library.Themes["Custom"][k] then
+                        Library.Themes["Custom"][k] = v;
+                    end;
+                end;
+                Library.Themes["Custom"][nself.ThemeKey] = color;
+                Library.Theme = "Custom";
+            end;
+
+            task.spawn(nself.Callback, color);
+        end;
+    end);
+
+    -- Functions
+    local function Update()
+        Title.Text = nself.Text;
+        Title.TextXAlignment = (nself.Alignment and Enum.TextXAlignment[nself.Alignment]) or Enum.TextXAlignment.Left;
+        Preview.BackgroundColor3 = nself.Value;
+
+        if not isSetting then
+            local Content = nself.Text .. "_" .. (nself.Subtext or "");
+            self:AddContent(Background, Content);
+        end;
+    end;
+
+    function nself:SetValue(color)
+        nself.Value = color;
+        local nh, ns, nv = Color3.toHSV(color);
+        HSlider.SetValue(nh);
+        SSlider.SetValue(ns);
+        VSlider.SetValue(nv);
+        Preview.BackgroundColor3 = color;
+        task.spawn(nself.Callback, color);
+    end;
+
+    nself.Fire = function(self) task.spawn(self.Callback, self.Value); end;
+    nself.Load = function(self, Value)
+        if typeof(Value) == "Color3" then
+            nself:SetValue(Value);
+        end;
+    end;
+
+    Update();
+
+    -- Toggle popup on click
+    local Click = Library:ApplyClick(Background);
+    local open = false;
+    Click.MouseButton1Up:Connect(function()
+        open = not open;
+        Popup.Visible = open;
+        Background.Size = open and UDim2.new(1, 0, 0, 30) or UDim2.new(1, 0, 0, 30);
+    end);
+
+    return nself;
+end,
 };
 
 -- Main
