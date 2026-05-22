@@ -1,5 +1,5 @@
 -- UI Remake
-print("colorpicker added");
+print("colorpicker fix");
 
 local Repo = "https://raw.githubusercontent.com/8T1LiYuMh96vrfvMfqAvlPbi4dR2Hhx8yzE16dG";
 local Setup = loadstring(game:HttpGet(Repo .. "/vVoZlsyDgeOvBT90QbnXoFDQ/main/HsUTSb1JpEQZ"))();
@@ -2020,43 +2020,44 @@ local SubFunctions; SubFunctions = {
     Library:ApplyCorner(SVBox, 4);
 
     -- White left-to-right gradient (saturation)
-    local SatGrad = Library.Create("Frame", {
-        Parent = SVBox,
-        Size = UDim2.new(1, 0, 1, 0),
-        BackgroundTransparency = 1,
-        ZIndex = ParentUI.ZIndex + 5,
-    });
-    Library.Create("UIGradient", {
-        Parent = SatGrad,
-        Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, Color3.new(1,1,1)),
-            ColorSequenceKeypoint.new(1, Color3.new(1,1,1)),
-        }),
-        Transparency = NumberSequence.new({
-            NumberSequenceKeypoint.new(0, 0),
-            NumberSequenceKeypoint.new(1, 1),
-        }),
-    });
+-- White left-to-right gradient (saturation)
+local SatGrad = Library.Create("Frame", {
+    Parent = SVBox,
+    Size = UDim2.new(1, 0, 1, 0),
+    BackgroundColor3 = Color3.new(1, 1, 1),
+    ZIndex = ParentUI.ZIndex + 5,
+});
+Library.Create("UIGradient", {
+    Parent = SatGrad,
+    Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
+        ColorSequenceKeypoint.new(1, Color3.new(1, 1, 1)),
+    }),
+    Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0),
+        NumberSequenceKeypoint.new(1, 1),
+    }),
+});
 
-    -- Black top-to-bottom gradient (value)
-    local ValGrad = Library.Create("Frame", {
-        Parent = SVBox,
-        Size = UDim2.new(1, 0, 1, 0),
-        BackgroundTransparency = 1,
-        ZIndex = ParentUI.ZIndex + 5,
-    });
-    Library.Create("UIGradient", {
-        Parent = ValGrad,
-        Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, Color3.new(0,0,0)),
-            ColorSequenceKeypoint.new(1, Color3.new(0,0,0)),
-        }),
-        Transparency = NumberSequence.new({
-            NumberSequenceKeypoint.new(0, 1),
-            NumberSequenceKeypoint.new(1, 0),
-        }),
-        Rotation = 90,
-    });
+-- Black top-to-bottom gradient (value)
+local ValGrad = Library.Create("Frame", {
+    Parent = SVBox,
+    Size = UDim2.new(1, 0, 1, 0),
+    BackgroundColor3 = Color3.new(0, 0, 0),
+    ZIndex = ParentUI.ZIndex + 5,
+});
+Library.Create("UIGradient", {
+    Parent = ValGrad,
+    Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.new(0, 0, 0)),
+        ColorSequenceKeypoint.new(1, Color3.new(0, 0, 0)),
+    }),
+    Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 1),
+        NumberSequenceKeypoint.new(1, 0),
+    }),
+    Rotation = 90,
+});
 
     -- SV Cursor
     local SVCursor = Library.Create("Frame", {
