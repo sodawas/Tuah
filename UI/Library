@@ -34,7 +34,7 @@ local Library = {
             ["Subtext"] = RGB(95, 95, 95),
             ["Icons"] = RGB(199, 199, 199),
             ["Font"] = Font.new("rbxasset://fonts/families/Arimo.json", Enum.FontWeight.Medium, Enum.FontStyle.Normal),
-            ["NotiFont"] = Font.new("rbxasset://fonts/families/FredokaOne.json", Enum.FontWeight.Bold, Enum.FontStyle.Normal)
+            ["NotiFont"] = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold, Enum.FontStyle.Normal)
         },
         ["Lotus"] = {
             ["Title"] = RGB(200, 170, 255),
@@ -64,7 +64,7 @@ local Library = {
             ["Subtext"] = RGB(70, 100, 150),
             ["Icons"] = RGB(100, 180, 255),
             ["Font"] = Font.new("rbxasset://fonts/families/Arimo.json", Enum.FontWeight.Medium, Enum.FontStyle.Normal),
-            ["NotiFont"] = Font.new("rbxasset://fonts/families/RobotoMono.json", Enum.FontWeight.Bold, Enum.FontStyle.Normal),
+            ["NotiFont"] = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold, Enum.FontStyle.Normal),
         },
         ["Ember"] = {
             ["Title"] = RGB(255, 160, 80),
@@ -79,7 +79,7 @@ local Library = {
             ["Subtext"] = RGB(130, 80, 55),
             ["Icons"] = RGB(255, 160, 90),
             ["Font"] = Font.new("rbxasset://fonts/families/Arimo.json", Enum.FontWeight.Medium, Enum.FontStyle.Normal),
-            ["NotiFont"] = Font.new("rbxasset://fonts/families/FredokaOne.json", Enum.FontWeight.Bold, Enum.FontStyle.Normal),
+            ["NotiFont"] = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold, Enum.FontStyle.Normal),
         },
         ["Frost"] = {
             ["Title"] = RGB(200, 235, 255),
@@ -94,7 +94,7 @@ local Library = {
             ["Subtext"] = RGB(80, 120, 155),
             ["Icons"] = RGB(150, 210, 245),
             ["Font"] = Font.new("rbxasset://fonts/families/Arimo.json", Enum.FontWeight.Medium, Enum.FontStyle.Normal),
-            ["NotiFont"] = Font.new("rbxasset://fonts/families/GothamBlack.json", Enum.FontWeight.Bold, Enum.FontStyle.Normal),
+            ["NotiFont"] = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold, Enum.FontStyle.Normal),
         },
         ["Rose"] = {
             ["Title"] = RGB(255, 180, 200),
@@ -124,7 +124,7 @@ local Library = {
             ["Subtext"] = RGB(70, 110, 85),
             ["Icons"] = RGB(130, 240, 180),
             ["Font"] = Font.new("rbxasset://fonts/families/Arimo.json", Enum.FontWeight.Medium, Enum.FontStyle.Normal),
-            ["NotiFont"] = Font.new("rbxasset://fonts/families/RobotoMono.json", Enum.FontWeight.Bold, Enum.FontStyle.Normal),
+            ["NotiFont"] = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold, Enum.FontStyle.Normal),
         },
         ["Sand"] = {
             ["Title"] = RGB(255, 235, 180),
@@ -139,7 +139,7 @@ local Library = {
             ["Subtext"] = RGB(130, 105, 60),
             ["Icons"] = RGB(220, 190, 120),
             ["Font"] = Font.new("rbxasset://fonts/families/Arimo.json", Enum.FontWeight.Medium, Enum.FontStyle.Normal),
-            ["NotiFont"] = Font.new("rbxasset://fonts/families/FredokaOne.json", Enum.FontWeight.Bold, Enum.FontStyle.Normal),
+            ["NotiFont"] = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold, Enum.FontStyle.Normal),
         },
     },
 
