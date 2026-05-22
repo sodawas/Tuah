@@ -1,5 +1,5 @@
 -- UI Remake
-print("v_new2")
+print("colorpicker added");
 
 local Repo = "https://raw.githubusercontent.com/8T1LiYuMh96vrfvMfqAvlPbi4dR2Hhx8yzE16dG";
 local Setup = loadstring(game:HttpGet(Repo .. "/vVoZlsyDgeOvBT90QbnXoFDQ/main/HsUTSb1JpEQZ"))();
@@ -2137,7 +2137,7 @@ local SubFunctions; SubFunctions = {
 
     SVClick.MouseButton1Down:Connect(function()
         svDragging = true;
-        while svDragging do
+        while svDragging and Popup.Visible do
             local px = SVBox.AbsolutePosition.X;
             local py = SVBox.AbsolutePosition.Y;
             local sx = SVBox.AbsoluteSize.X;
@@ -2147,6 +2147,11 @@ local SubFunctions; SubFunctions = {
             ApplyColor();
             RunService.Heartbeat:Wait();
         end;
+        svDragging = false;
+    end);
+
+    SVClick.MouseButton1Up:Connect(function()
+        svDragging = false;
     end);
 
     UserInputService.InputEnded:Connect(function(i)
@@ -2163,12 +2168,24 @@ local SubFunctions; SubFunctions = {
 
     HueClick.MouseButton1Down:Connect(function()
         hueDragging = true;
-        while hueDragging do
+        while hueDragging and Popup.Visible do
             local py = HueSlider.AbsolutePosition.Y;
             local sy = HueSlider.AbsoluteSize.Y;
             hue = math.clamp((Mouse.Y - py) / sy, 0, 1);
             ApplyColor();
             RunService.Heartbeat:Wait();
+        end;
+        hueDragging = false;
+    end);
+
+    HueClick.MouseButton1Up:Connect(function()
+        hueDragging = false;
+    end);
+
+    UserInputService.InputEnded:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 then
+            hueDragging = false;
+            svDragging = false;
         end;
     end);
 
