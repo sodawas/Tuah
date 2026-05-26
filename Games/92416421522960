@@ -1,0 +1,1711 @@
+--:: SLIME RNG - DEV ::--
+SLIME = {};
+PLACE_IDS = {92416421522960};
+REPO = "https://raw.githubusercontent.com/sodawas/Data";
+GIT = REPO .. "/refs/heads/main/92416421522960";
+NEW_INVITE = "https://discord.gg/HPa9UwxssG";
+
+--:: UI ::--
+local Repo = "https://raw.githubusercontent.com/sodawas";
+local Library = loadstring(game:HttpGet(Repo .. "/Tuah/refs/heads/main/UI/Library"))();
+local Setup = loadstring(game:HttpGet(Repo .. "/Tuah/refs/heads/main/UI/Manager"))();
+Setup:Basics();
+
+--:: VARIABLES ::-- 
+local players = cloneref(game:GetService("Players"));
+local client = cloneref(players.LocalPlayer);
+local character = cloneref(client.Character or client.CharacterAdded:Wait());
+local humanoidrootpart = cloneref(character:FindFirstChild("HumanoidRootPart") or character:WaitForChild("HumanoidRootPart", math.random(1,5)));
+local replicatedstorage = cloneref(game:GetService("ReplicatedStorage"));
+
+--:: GAME VARIABLES ::--
+local enemies = require(replicatedstorage.Source.Game.Items.Enemies); --[ DATA TABLE ]--
+local food = require(replicatedstorage.Source.Game.Items.Food); --[ DATA TABLE ]--
+local fruits = require(replicatedstorage.Source.Game.Items.Fruits); --[ DATA TABLE ]--
+local slimes = require(replicatedstorage.Source.Game.Items.Slimes); --[ DATA TABLE ]--
+local zones = require(replicatedstorage.Source.Game.Items.Zones); --[ DATA TABLE ]--
+local rollslice = require(replicatedstorage.Source.Features.Roll.RollSlice);
+local rollserviceclient = require(replicatedstorage.Source.Features.Roll.RollServiceClient);
+local rollstatresolver = require(replicatedstorage.Source.Features.Roll.RollStatResolver);
+local goop_gun_utils = require(replicatedstorage.Source.Features.GoopGun.GoopGunServiceUtils);
+local gameplay_client = require(replicatedstorage.Source.Features.Gameplay.GameplayServiceClient);
+local slimes_data = require(replicatedstorage.Source.Game.Items.Slimes);
+local zone_get = zones.getZone;
+local zone_get_max = zones.getMaxZone;
+local networker_0_3_1 = replicatedstorage.Packages._Index["leifstout_networker@0.3.1"].networker._remotes;
+
+--:: FUNCTIONS ::--
+function SLIME:entry()
+    if typeof(SLIME) == "table" and table.find(PLACE_IDS, game.PlaceId) then 
+        print(" -- Check Successful -- " .. " | " .. tostring(os.date()));
+    else
+        print(" -- Check Failed -- ");
+    end;
+end;
+
+function SLIME:client_kick(msg)
+    msg = msg or "//";
+    if typeof(msg) == "string" then
+        return client:Kick(msg);
+    end;
+end;
+
+function SLIME:get_game()
+    local market_service = game:GetService("MarketplaceService");
+    local succ, m_info = pcall(market_service.GetProductInfo, market_service, game.PlaceId);
+    return succ and m_info.Name or "N/A";
+end;
+
+function SLIME:build()
+    local success, response = pcall(function()
+        return request({
+            Url = GIT,
+            Method = "GET"
+        })
+    end)
+
+    if not success or not response or response.StatusCode ~= 200 then
+        return "Unknown";
+    end;
+
+    local body = tostring(response.Body or "");
+    if string.find(body, "Down") then
+        return "Unknown";
+    end;
+    return "Updated";
+end;
+
+local notify_queue = {};
+task.spawn(function()
+    while true do
+        task.wait(0.1);
+        if #notify_queue > 0 then
+            local msg = table.remove(notify_queue, 1);
+            Library:Notify(msg, 8, "Notification");
+        end;
+    end;
+end);
+
+local real_cooldown = 3.0;
+local roll_orig;
+roll_orig = hookfunction(rollslice.actions.setRollTable, function(data)
+    if data and data.rollTime then
+        real_cooldown = data.rollTime;
+    end;
+    if getgenv().instant_roll_enabled and data then
+        data.rollTime = 0.1;
+    end;
+
+    local result = roll_orig(data);
+
+    if getgenv().roll_log_enabled then
+        local roll_results = rollslice.rollResults();
+        if type(roll_results) == "table" then
+            for _, column in pairs(roll_results) do
+                if type(column) ~= "table" then continue; end;
+                for _, roll in pairs(column) do
+                    if type(roll) ~= "table" or not roll.id or roll.kind then continue; end;
+                    local ok, slime_info = pcall(slimes_data.getSlime, roll.id);
+                    local name = (ok and slime_info and slime_info.name) or roll.id;
+                    local rarity = (ok and slime_info and slime_info.odds) or 1;
+                    local mutations = "";
+                    if roll.mutations then
+                        for mutation, _ in pairs(roll.mutations) do
+                            mutations = mutations .. "[" .. mutation .. "] ";
+                        end;
+                    end;
+                    local notify_threshold = getgenv().roll_log_threshold or 1000;
+                    if (1 / rarity) >= notify_threshold then
+                        local n, m, r = name, mutations, rarity;
+                        table.insert(notify_queue,
+                            "🎲 " .. n ..
+                            (m ~= "" and "\n✨ " .. m or "") ..
+                            "\n📊 1/" .. math.round(1 / r)
+                        );
+                       local webhook_url = getgenv().roll_webhook_url or "";
+                        local min_odds = getgenv().roll_webhook_min_odds or 10000;
+                        if getgenv().roll_webhook_enabled and webhook_url ~= "" and (1 / r2) >= min_odds then
+                            local ping_str = "";
+                            local user_id = getgenv().roll_webhook_userid or "";
+                            if getgenv().roll_webhook_ping and user_id ~= "" then
+                                ping_str = "<@" .. user_id .. ">";
+                            end;
+                            task.defer(function()
+                                pcall(function()
+                                    local slime_ok, slime_data = pcall(slimes_data.getSlime, roll.id);
+                                    local thumbnail = (slime_ok and slime_data and slime_data.imageId) and 
+                                        "https://assetdelivery.roblox.com/v1/asset/?id=" .. tostring(slime_data.imageId) or nil;
+
+                                    local embed = {
+                                        ["title"] = "🎲 Rare Slime Rolled!",
+                                        ["description"] = ping_str ..
+                                            (ping_str ~= "" and "\n" or "") ..
+                                            "**" .. n2 .. "**" ..
+                                            (m2 ~= "" and "\n✨ Mutations: " .. m2 or "") ..
+                                            "\n📊 Odds: 1/" .. math.round(1 / r2) ..
+                                            "\n👤 Player: " .. tostring(client) ..
+                                            "\n🌍 Server: " .. tostring(game.JobId),
+                                        ["color"] = 0x7973ea,
+                                        ["footer"] = { ["text"] = "Lotus • " .. tostring(os.date()) },
+                                        ["fields"] = {
+                                            { ["name"] = "Rarity", ["value"] = "1/" .. math.round(1 / r2), ["inline"] = true },
+                                            { ["name"] = "Mutations", ["value"] = m2 ~= "" and m2 or "None", ["inline"] = true },
+                                        }
+                                    };
+
+                                    if thumbnail then
+                                        embed["thumbnail"] = { ["url"] = thumbnail };
+                                    end;
+
+                                    request({
+                                        Url = webhook_url,
+                                        Method = "POST",
+                                        Headers = { ["Content-Type"] = "application/json" },
+                                        Body = game:GetService("HttpService"):JSONEncode({
+                                            ["content"] = ping_str ~= "" and ping_str or nil,
+                                            ["embeds"] = { embed }
+                                        })
+                                    });
+                                end);
+                            end);
+                        end;
+                    end;
+                end;
+            end;
+        end;
+    end;
+
+    return result;
+end);
+
+function SLIME:auto_roll(b_c)
+    b_c = b_c or false;
+    task.spawn(function()
+        local ok, err = pcall(function()
+            while (getgenv().auto_roll) and (b_c) do
+                pcall(function()
+                    rollserviceclient.roll(rollserviceclient);
+                end);
+                task.wait(real_cooldown + 0.05);
+            end;
+        end);
+        if not ok then print("auto_roll error:", err); end;
+    end);
+end;
+
+function SLIME:auto_rebirth(r_c)
+    r_c = r_c or false;
+    local rebirthservice__event = networker_0_3_1.RebirthService.RemoteFunction;
+
+    if not rebirthservice__event then 
+        self:client_kick("something unexpected happened with networker path;");
+        return;
+    end;
+
+    task.spawn(pcall, function()
+        while (getgenv().auto_rebirth) and (r_c) and rebirthservice__event do
+            local can_rebirth = false;
+
+            local ok, progress_label = pcall(function()
+                return game:GetService("Players").LocalPlayer.PlayerGui.Root.Rebirth.Content.RebirthContent.Footer.RebirthProgressBar:GetChildren()[2].TextLabel;
+            end);
+
+            if ok and progress_label then
+                local text = progress_label.Text or "";
+                local current_str, max_str = text:match("^(.-)%/(.+)$");
+
+                if current_str and max_str then
+                    local function parse_value(str)
+                        local n = tonumber(str:match("[%d%.]+")) or 0;
+                        if str:find("K") then n = n * 1000;
+                        elseif str:find("M") then n = n * 1000000; end;
+                        return n;
+                    end;
+
+                    can_rebirth = parse_value(current_str) >= parse_value(max_str);
+                end;
+            end;
+
+            if can_rebirth then
+                rebirthservice__event:InvokeServer("requestRebirth");
+                task.wait();
+            else
+                task.wait(math.random(10,15));
+            end;
+        end;
+    end);
+end;
+
+function SLIME:auto_equip_best(e_c)
+    e_c = e_c or false;
+    local inventoryservice__event = networker_0_3_1.InventoryService.RemoteFunction;
+
+    if not inventoryservice__event then
+        self:client_kick("something unexpected happened with networker path;");
+        return;
+    end;
+
+    task.spawn(pcall, function()
+        while (getgenv().auto_equip_best) and (e_c) and inventoryservice__event do
+            inventoryservice__event:InvokeServer("requestEquipBest");
+            task.wait(5);
+        end;
+    end);
+end;
+
+function SLIME:auto_buy_zone(b_c)
+    b_c = b_c or false;
+    local zonesservice__event = networker_0_3_1.ZonesService.RemoteFunction;
+
+    if not zonesservice__event then
+        self:client_kick("something unexpected happened with networker path;");
+        return;
+    end;
+
+    task.spawn(pcall, function()
+        local function parse_value(str)
+            str = str:gsub(",", "");
+            local n = tonumber(str:match("[%d%.]+")) or 0;
+            if str:find("K") then n = n * 1000;
+            elseif str:find("M") then n = n * 1000000;
+            elseif str:find("B") then n = n * 1000000000;
+            elseif str:find("e") or str:find("E") then n = tonumber(str) or 0; end;
+            return n;
+        end;
+
+        while (getgenv().auto_buy_zone) and (b_c) and zonesservice__event do
+            local can_buy = false;
+
+            local ok = pcall(function()
+                local player_gui = client.PlayerGui;
+                local cost_label = player_gui.ZonePurchase.Frame.TextLabelFrame.TextLabel;
+                local coin_label = player_gui.Root.LeftSideBar.CounterStack.CoinCounter.CounterRow.Amount.TextLabel;
+
+                local cost = parse_value(cost_label.Text or "");
+                local coins = parse_value(coin_label.Text or "");
+
+                can_buy = coins >= cost and cost > 0;
+            end);
+
+            if ok and can_buy then
+                zonesservice__event:InvokeServer("requestPurchaseZone");
+                task.wait(1);
+                getgenv().zone_teleporting = true;
+                task.wait(1);
+                for i = zone_get_max(), 1, -1 do
+                    local ok2, result2 = pcall(function()
+                        return zonesservice__event:InvokeServer("requestTeleportZone", i);
+                    end);
+                    if ok2 and result2 == true then
+                        break;
+                    end;
+                end;
+                task.wait(2);
+                getgenv().zone_teleporting = false;
+                task.wait(3);
+            else
+                task.wait(1);
+            end;
+        end;
+    end);
+end;
+
+function SLIME:auto_teleport_zone(t_c)
+    t_c = t_c or false;
+    local zonesservice__event = networker_0_3_1.ZonesService.RemoteFunction;
+
+    if not zonesservice__event then
+        self:client_kick("something unexpected happened with networker path;");
+        return;
+    end;
+
+    task.spawn(pcall, function()
+        while (getgenv().auto_teleport_zone) and (t_c) and zonesservice__event do
+            local selected = getgenv().teleport_zone_selected or "Furthest";
+
+            if selected == "Furthest" then
+                for i = zone_get_max(), 1, -1 do
+                    local ok, result = pcall(function()
+                        return zonesservice__event:InvokeServer("requestTeleportZone", i);
+                    end);
+                    if ok and result == true then
+                        break;
+                    end;
+                end;
+            else
+                for i = 1, zone_get_max() do
+                    local zone = zone_get(i);
+                    if zone and zone["name"] == selected then
+                        zonesservice__event:InvokeServer("requestTeleportZone", i);
+                        break;
+                    end;
+                end;
+            end;
+            task.wait();
+        end;
+    end);
+end;
+
+function SLIME:auto_claim_index(c_c)
+    c_c = c_c or false;
+    local indexservice__event = networker_0_3_1.IndexService.RemoteFunction;
+
+    if not indexservice__event then
+        self:client_kick("something unexpected happened with networker path;");
+        return;
+    end;
+
+    local reward_types = { "basic", "big", "huge", "shiny", "inverted" };
+
+    task.spawn(pcall, function()
+        while (getgenv().auto_claim_index) and (c_c) and indexservice__event do
+            for _, reward_type in ipairs(reward_types) do
+                pcall(function()
+                    indexservice__event:InvokeServer("requestClaimReward", reward_type);
+                end);
+                task.wait();
+            end;
+            task.wait(1);
+        end;
+    end);
+end;
+
+function SLIME:auto_claim_offline(a_c)
+    a_c = a_c or false;
+    local offlineservice__event = networker_0_3_1.OfflineEarningsService.RemoteFunction;
+
+    if not offlineservice__event then
+        self:client_kick("something unexpected happened with networker path;");
+        return;
+    end;
+
+    task.spawn(pcall, function()
+        while (getgenv().auto_claim_offline) and (a_c) and offlineservice__event do
+            offlineservice__event:InvokeServer("requestClaim");
+            task.wait(30);
+        end;
+    end);
+end;
+
+function SLIME:auto_slime_gun(s_c)
+    s_c = s_c or false;
+    local slimegun__event = networker_0_3_1.SlimeGunService.RemoteFunction;
+
+    if not slimegun__event then
+        self:client_kick("something unexpected happened with networker path;");
+        return;
+    end;
+
+    task.spawn(function()
+        local ok, err = pcall(function()
+            while (getgenv().auto_slime_gun) and (s_c) and slimegun__event do
+
+                if not character:FindFirstChild("SlimeGun") then
+                    local gun = client.Backpack:FindFirstChild("SlimeGun");
+                    local humanoid = character:FindFirstChildOfClass("Humanoid");
+                    if gun and humanoid then
+                        humanoid:EquipTool(gun);
+                        task.wait(0.2);
+                    end;
+                    task.wait(0.3);
+                    continue;
+                end;
+
+                local upgrades = require(replicatedstorage.Packages.DataService).client:get("upgrades") or {};
+
+                if not require(replicatedstorage.Source.Features.Upgrades.UpgradeServiceUtils).ownsUpgrade("slimeGun", upgrades) then
+                    task.wait(1);
+                    continue;
+                end;
+
+                local gun_range = goop_gun_utils.getRange(upgrades);
+                local gameplay = gameplay_client.gameplay;
+
+                if gameplay and gameplay.enemies then
+                    local nearest_id = nil;
+                    local nearest_dist = math.huge;
+
+                    for unique_id, enemy_data in gameplay.enemies do
+                        local enemy_root = enemy_data.model and enemy_data.model:FindFirstChild("RootPart");
+                        if enemy_root then
+                            local dist = (enemy_root.Position - humanoidrootpart.Position).Magnitude;
+                            if dist < nearest_dist and dist <= gun_range then
+                                nearest_id = unique_id;
+                                nearest_dist = dist;
+                            end;
+                        end;
+                    end;
+
+                    if nearest_id then
+                        local equipped_gun = character:FindFirstChild("SlimeGun");
+                        if equipped_gun then
+                            firesignal(equipped_gun.Activated);
+                            task.wait(0.05);
+                            pcall(function()
+                                slimegun__event:InvokeServer("tryFireSlimeGun", nearest_id);
+                            end);
+                        end;
+                    end;
+                end;
+
+                local fire_rate = goop_gun_utils.getFireRate(upgrades);
+                local wait_time = (type(fire_rate) == "number" and fire_rate > 0) and (1 / fire_rate) or 0.3;
+                task.wait(wait_time);
+            end;
+        end);
+
+        if not ok then
+            print("auto_slime_gun error:", err);
+        end;
+    end);
+end;
+
+function SLIME:auto_redeem_codes()
+    local ok, response = pcall(function()
+        return request({
+            Url = "https://beebom.com/slime-rng-codes/",
+            Method = "GET"
+        });
+    end);
+
+    if not ok or not response or response.StatusCode ~= 200 then
+        Library:Notify("Failed to fetch codes", 5, "Error");
+        return;
+    end;
+
+    local blacklist = { "Shop", "Redeem", "NEW", "Home", "Gaming", "Share", "Update" };
+    local codes = {};
+
+    for code in response.Body:gmatch("<strong>(.-)</strong>") do
+        if not code:find("<") and not code:find(">") then
+            local blacklisted = false;
+            for _, v in ipairs(blacklist) do
+                if code == v then
+                    blacklisted = true;
+                    break;
+                end;
+            end;
+            if not blacklisted then
+                table.insert(codes, code);
+            end;
+        end;
+    end;
+
+    if #codes == 0 then
+        Library:Notify("Failed to fetch codes", 5, "Error");
+        return;
+    end;
+
+    local codeservice__event = replicatedstorage.Packages._Index["leifstout_networker@0.3.1"].networker._remotes.CodeService.RemoteFunction;
+    local code_utils = require(replicatedstorage.Source.Features.Codes.CodeServiceUtils);
+
+    if not codeservice__event then
+        Library:Notify("CodeService not found", 5, "Error");
+        return;
+    end;
+
+    local redeemed = 0;
+    local already_used = 0;
+    local expired = 0;
+    local failed = 0;
+
+    for _, code in ipairs(codes) do
+        local c_ok, result = pcall(function()
+            return codeservice__event:InvokeServer("redeem", code);
+        end);
+
+        if c_ok then
+            if result == code_utils.REDEEM_ENUMS.success then
+                redeemed += 1;
+            elseif result == code_utils.REDEEM_ENUMS.alreadyRedeemed then
+                already_used += 1;
+            elseif result == code_utils.REDEEM_ENUMS.expired then
+                expired += 1;
+            elseif result == code_utils.REDEEM_ENUMS.invalid then
+                --[[ skip ]]--
+            else
+                failed += 1;
+            end;
+        else
+            failed += 1;
+        end;
+
+        task.wait(0.5);
+    end;
+
+    Library:Notify(
+        "✅ Redeemed: " .. redeemed ..
+        "\n🔄 Already Used: " .. already_used ..
+        "\n⌛ Expired: " .. expired ..
+        "\n❌ Failed: " .. failed,
+        10, "Notification"
+    );
+end;
+
+upgrade_priority_map = {
+    ["Luck"] = { "luck1","luck2","luck3","luck4","luck5","luck6","luck7","luck8","luck9","luck10","luck11","luck12","luck13","luck14","luck15","luck16","luck17","luck18","luck19","luck20","luck21" },
+    ["Roll Speed"] = { "rollSpeed1","rollSpeed2","rollSpeed3","rollSpeed4","rollSpeed5","rollSpeed6" },
+    ["Coin Income"] = { "coinIncome1","coinIncome2","coinIncome3","coinIncome4","coinIncome5","coinIncome6","coinIncome7","coinIncome8","coinIncome9","coinIncome10","coinIncome11","coinIncome12","coinIncome13","coinIncome14","coinIncome15","coinIncome16","coinIncome17" },
+    ["Enemy Count"] = { "enemyCount2","enemyCount3","enemyCount4","enemyCount5","enemyCount6","enemyCount7" },
+    ["Slots"] = { "slots2","slots3","slots4","slots5","slots6" },
+    ["Goop"] = { "goop","goopDropRate1","goopDropRate2","goopDropRate3","goopDropRate4","goopDropRate5","goopDropRate6","goopDropRate7","goopDropRate8" },
+    ["Overkill"] = { "overkill1","overkill2","overkill3","overkill4","overkill5","overkill6" },
+    ["Magnet"] = { "magnet1","magnet2","magnet3" },
+    ["Loot"] = { "lootApple","lootCarrot","lootCherries","lootGrapes","lootBanana","lootWatermelon","lootPizza","lootChicken","lootDrumstick" },
+    ["Slime Gun"] = { "slimeGun","slimeGunFireRate1","slimeGunFireRate2","slimeGunFireRate3","slimeGunRange1","slimeGunRange2","slimeGunRange3","slimeGunRange4","slimeGunRange5","slimeGunDamage1","slimeGunMarkBlitz1","slimeGunMarkBlitz2","slimeGunLoot","slimeGunMarkFury" },
+    ["All"] = {};
+};
+
+function SLIME:auto_upgrade(u_c)
+    u_c = u_c or false;
+    local upgradeservice__event = networker_0_3_1.UpgradeService.RemoteFunction;
+
+    if not upgradeservice__event then
+        self:client_kick("something unexpected happened with networker path;");
+        return;
+    end;
+
+    task.spawn(function()
+        local ok, err = pcall(function()
+            local upgrade_tree = require(replicatedstorage.Source.Features.Upgrades.UpgradeTree);
+            local data_service = require(replicatedstorage.Packages.DataService).client;
+            local upgrade_utils = require(replicatedstorage.Source.Features.Upgrades.UpgradeServiceUtils);
+
+            local all_upgrades = {};
+            for tree_name, tree in pairs(upgrade_tree) do
+                for upgrade_id, upgrade_data in pairs(tree) do
+                    if upgrade_data.cost then
+                        all_upgrades[upgrade_id] = upgrade_data;
+                    end;
+                end;
+            end;
+
+            upgrade_priority_map["All"] = {};
+            for id, _ in pairs(all_upgrades) do
+                table.insert(upgrade_priority_map["All"], id);
+            end;
+
+            while (getgenv().auto_upgrade) and (u_c) and upgradeservice__event do
+
+                local owned_upgrades = data_service:get("upgrades") or {};
+                local coins = data_service:get("coins") or 0;
+                local roll_currency = data_service:get("rollCurrency") or 0;
+
+                local owned_count = 0;
+                local total_count = 0;
+                for id, _ in pairs(all_upgrades) do
+                    total_count += 1;
+                    if upgrade_utils.ownsUpgrade(id, owned_upgrades) then
+                        owned_count += 1;
+                    end;
+                end;
+                if getgenv().upgrade_priority_label then
+                    getgenv().upgrade_priority_label:ChangeText("Bought: " .. owned_count .. "/" .. total_count .. " upgrades");
+                end;
+
+                local priority = getgenv().upgrade_priority or "All";
+                local upgrade_list;
+
+                if priority == "All" then
+                    upgrade_list = upgrade_priority_map["All"];
+                else
+                    upgrade_list = upgrade_priority_map[priority] or upgrade_priority_map["All"];
+                end;
+
+                local purchased = false;
+
+                for _, upgrade_id in ipairs(upgrade_list) do
+                    local upgrade_data = all_upgrades[upgrade_id];
+                    if not upgrade_data then continue; end;
+
+                    if upgrade_utils.ownsUpgrade(upgrade_id, owned_upgrades) then continue; end;
+
+                    local dep = upgrade_data.dependency;
+                    if dep and dep ~= "originDependency" then
+                        if not upgrade_utils.ownsUpgrade(dep, owned_upgrades) then continue; end;
+                    end;
+
+                    local currency = upgrade_data.cost.currency;
+                    local amount = upgrade_data.cost.amount;
+
+                    local can_afford = false;
+                    if currency == "coins" then
+                        can_afford = coins >= amount;
+                    elseif currency == "rollCurrency" then
+                        can_afford = roll_currency >= amount;
+                    end;
+
+                    if not can_afford then continue; end;
+
+                    local c_ok = pcall(function()
+                        upgradeservice__event:InvokeServer("requestUnlock", upgrade_id);
+                    end);
+
+                    if c_ok then
+                        purchased = true;
+                        task.wait(0.5);
+                        break;
+                    end;
+                end;
+
+                if not purchased then
+                    task.wait(5);
+                else
+                    task.wait(0.5);
+                end;
+            end;
+        end);
+
+        if not ok then
+            print("auto_upgrade error:", err);
+        end;
+    end);
+end;
+
+function SLIME:auto_use_boost(a_c)
+    a_c = a_c or false;
+    local boostservice__event = networker_0_3_1.BoostService.RemoteFunction;
+
+    if not boostservice__event then
+        self:client_kick("something unexpected happened with networker path;");
+        return;
+    end;
+
+    task.spawn(function()
+        local ok, err = pcall(function()
+            local data_service = require(replicatedstorage.Packages.DataService).client;
+            local boost_utils = require(replicatedstorage.Source.Features.Boosts.BoostServiceUtils);
+            local server_time = require(replicatedstorage.Source.Core.UI.Sources.serverTimeSource);
+
+            while (getgenv().auto_use_boost) and (a_c) and boostservice__event do
+
+                local boosts = data_service:get("boosts") or {};
+                local reconciled = boost_utils.reconcileBoosts(boosts);
+                local time = server_time();
+
+                local boost_config = {
+                    ["luck"]       = getgenv().auto_boost_luck or false;
+                    ["ultraLuck"]  = getgenv().auto_boost_ultra_luck or false;
+                    ["currency"]   = getgenv().auto_boost_currency or false;
+                    ["rollSpeed"]  = getgenv().auto_boost_roll_speed or false;
+                };
+
+                for boost_kind, enabled in pairs(boost_config) do
+                    if not enabled then continue; end;
+
+                    local boost_data = reconciled[boost_kind];
+                    local is_active = boost_utils.isActive(boost_data, time);
+                    local amount = boost_data and boost_data.amount or 0;
+
+                    if not is_active and amount > 0 then
+                        pcall(function()
+                            boostservice__event:InvokeServer("requestUseBoost", boost_kind);
+                        end);
+                        task.wait(0.5);
+                    end;
+                end;
+
+                task.wait(10);
+            end;
+        end);
+
+        if not ok then
+            print("auto_use_boost error:", err);
+        end;
+    end);
+end;
+
+function SLIME:auto_pickup_loot(p_c)
+    p_c = p_c or false;
+
+    task.spawn(function()
+        local ok, err = pcall(function()
+            while (getgenv().auto_pickup_loot) and (p_c) do
+                local loot_folder = workspace:FindFirstChild("Loot");
+                if loot_folder then
+                    for _, item in pairs(loot_folder:GetChildren()) do
+                        if not getgenv().auto_pickup_loot then break; end;
+
+                        local is_fruit = false;
+                        for _, child in pairs(item:GetChildren()) do
+                            local name_lower = child.Name:lower();
+                            if name_lower:find("fruit") then
+                                is_fruit = true;
+                                break;
+                            end;
+                        end;
+
+                      if is_fruit then
+                        local root = item:FindFirstChild("Root") or item:FindFirstChildOfClass("BasePart");
+                        if root then
+                            pcall(function()
+                                local original_cframe = humanoidrootpart.CFrame;
+                                getgenv().fruit_teleporting = true;
+
+                                humanoidrootpart.CFrame = root.CFrame + Vector3.new(0, 0, 2);
+                                task.wait(0.2);
+
+                                local prompt = nil;
+                                for _, desc in pairs(item:GetDescendants()) do
+                                    if desc:IsA("ProximityPrompt") then
+                                        prompt = desc;
+                                        break;
+                                    end;
+                                end;
+
+                                if prompt then
+                                    fireproximityprompt(prompt);
+                                    task.wait(0.1);
+                                end;
+
+                                humanoidrootpart.CFrame = original_cframe;
+                                task.wait(0.1);
+                                getgenv().fruit_teleporting = false; 
+                            end);
+                        end;
+                        else
+                            local root = item:FindFirstChild("Root") or item:FindFirstChildOfClass("BasePart");
+                            if root then
+                                pcall(function()
+                                    local prompt = nil;
+                                    for _, desc in pairs(item:GetDescendants()) do
+                                        if desc:IsA("ProximityPrompt") then
+                                            prompt = desc;
+                                            break;
+                                        end;
+                                    end;
+                                    if prompt then
+                                        fireproximityprompt(prompt);
+                                    else
+                                        firetouchinterest(root, humanoidrootpart, true);
+                                        task.wait();
+                                        firetouchinterest(root, humanoidrootpart, false);
+                                    end;
+                                end);
+                            end;
+                        end;
+
+                        task.wait(0.1);
+                    end;
+                end;
+                task.wait(0.5);
+            end;
+        end);
+
+        if not ok then
+            print("auto_pickup_loot error:", err);
+        end;
+    end);
+end;
+
+local Window = Library:CreateWindow({ Title = "", Icon = { "rbxassetid://101308344257609", UDim2.new(0, 125, 0, 125) } });
+local Tabs = {
+    Dashboard = Window:CreateTab({ Title = "Dashboard", Icon = "rbxassetid://120063430541108" }),
+    Farming = Window:CreateTab({ Title = "Farm", Icon = "rbxassetid://103447818844163" }),
+    Miscellaneous = Window:CreateTab({ Title = "Misc", Icon = "rbxassetid://87313080232273" }),
+    Config = Window:CreateTab({ Title = "Config", Icon = "rbxassetid://94377454418556" }),
+};
+local Sections = {
+    Dashboard = Tabs.Dashboard:CreateSection({ Title = "Info", Side = "Full", }),
+    About = Tabs.Dashboard:CreateSection({ Title = "About", Side = "Left", }),
+    Insights = Tabs.Dashboard:CreateSection({ Title = "Insights", Side = "Right", }),
+    UI_Controls = Tabs.Config:CreateSection({ Title = "UI", Side = "Left", }),
+    Save = Tabs.Config:CreateSection({ Title = "Save", Side = "Right", }),
+    Themes = Tabs.Config:CreateSection({ Title = "Preset", Side = "Left", }),
+    Custom_Themes = Tabs.Config:CreateSection({ Title = "Custom Theme", Side = "Right", }),
+    Farming = Tabs.Farming:CreateSection({ Title = "Rolling", Side = "Left" }),
+    Combat = Tabs.Farming:CreateSection({ Title = "Combat", Side = "Right" }),
+    Buying = Tabs.Farming:CreateSection({ Title = "Buying", Side = "Left" }),
+    Travel = Tabs.Farming:CreateSection({ Title = "Travel", Side = "Right" }),
+    Miscellaneous = Tabs.Miscellaneous:CreateSection({ Title = "Miscellaneous", Side = "Left" }),
+    Buffs = Tabs.Miscellaneous:CreateSection({ Title = "Buffs", Side = "Right" }),
+    Upgrades = Tabs.Miscellaneous:CreateSection({ Title = "Upgrades", Side = "Left" }),
+    Boost = Tabs.Miscellaneous:CreateSection({ Title = "Boost", Side = "Right" }),
+    Webhook = Tabs.Config:CreateSection({ Title = "Webhook", Side = "Left" })
+};
+
+local Greeting = Sections.Dashboard:CreateLabel({ 
+    Text = "Welcome, ".. tostring(client) .. "!", 
+    Alignment = "Center" 
+});
+
+local DiscordMembers = Sections.About:CreateLabel({
+     Text = "Members: 1.6k", 
+     Alignment = "Center" 
+});
+
+local DiscordInvite = Sections.About:CreateLabel({
+     Text = "".. tostring(NEW_INVITE), 
+     Alignment = "Center" 
+});
+
+local discord_invite; discord_invite = Sections.About:CreateButton({ 
+    Text = "Copy Invite", 
+    Callback = function()
+        local new_invite = NEW_INVITE or "https://discord.gg/HPa9UwxssG";
+
+        if new_invite then 
+            setclipboard(tostring(new_invite));
+            Library:Notify("Copied Discord Invite to clipboard", 10, "Notification");
+            --
+            discord_invite:ChangeText("Copied Invite!");
+            task.wait(math.random(1,2));
+            discord_invite:ChangeText("Copy Invite");
+        end;
+    end});
+
+local place_id = Sections.Insights:CreateButton({ 
+    Text = "".. tostring(game.PlaceId), 
+    Callback = function() 
+end})
+
+local game_ = Sections.Insights:CreateButton({ 
+    Text = "".. tostring(SLIME:get_game()), 
+    Callback = function() 
+end})
+
+local build = Sections.Insights:CreateButton({ 
+    Text = "Build: 🟢 ".. tostring(SLIME:build()), 
+    Callback = function() 
+end})
+
+local save; save = Sections.Save:CreateButton({
+    Text = "Save Config",
+    Alignment = "Left",
+    Callback = function()
+        Library:Save();
+        Library:Notify("Config Saved", 5, "Notification");
+    end,
+})
+
+local load; load = Sections.Save:CreateButton({
+    Text = "Load Config",
+    Alignment = "Left",
+    Callback = function()
+        Library:Load();
+        Library:Notify("Loaded saved Config", 5, "Notification");
+    end,
+})
+    
+local auto_save; auto_save = Sections.Save:CreateToggle({
+    Text = "Auto Save";
+    Subtext = "";
+    Alignment = "Left";
+    Default = true;
+    Callback = function(Value)
+        getgenv().save_ts = Value;
+
+            task.spawn(function()
+            while getgenv().save_ts do
+                task.wait(math.random(1,2));
+                if getgenv().save_ts then
+                    Library:Save();
+                end;
+            end;
+        end);
+    end;    
+    Flag = "auto_save";
+})
+
+local ui_toggle; ui_toggle = Sections.UI_Controls:CreateKeybind({
+    Text = "Toggle UI";
+    Subtext = "Hide Menu with Key" ;
+    Alignment = "Left"; 
+    Default = "N"; 
+    Callback = function() 
+        Window:Visibility();
+    end;
+    Flag = "ui_keybind";
+});
+    
+local unload; unload = Sections.UI_Controls:CreateButton({
+    Text = "Exit Menu";
+    Alignment = "Center"; 
+    Callback = function()
+        getgenv().save_ts = false;
+        Library:Save();
+        Window:Exit();    
+    end;
+});
+
+local ui_theme; ui_theme = Sections.Themes:CreateDropdown({
+    Text = "Theme";
+    Subtext = "";
+    Alignment = "Left";
+    Choices = { "Default", "Lotus", "Abyss", "Ember", "Frost", "Rose", "Void", "Sand" };
+    Multi = false;
+    Default = "Default";
+    Callback = function(Value)
+        local enabled_flag = Library.Created.Flags["ui_theme_enabled"];
+        if enabled_flag and enabled_flag.Value then
+            Library.Theme = tostring(Value);
+        end;
+    end;
+    Flag = "ui_theme";
+})
+
+local ui_theme_enabled; ui_theme_enabled = Sections.Themes:CreateToggle({
+    Text = "Set Theme";
+    Subtext = "";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(Value)
+        if Value then
+            local theme_flag = Library.Created.Flags["ui_theme"];
+            local theme_name = theme_flag and theme_flag.Value;
+            Library.Theme = (theme_name and Library.Themes[theme_name]) and theme_name or "Default";
+        else
+            Library.Theme = "Default";
+        end;
+    end;
+    Flag = "ui_theme_enabled";
+})
+
+local rainbow_mode; rainbow_mode = Sections.Themes:CreateToggle({
+    Text = "Rainbow Mode";
+    Subtext = "";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(Value)
+        getgenv().rainbow_mode = Value;
+
+        if Value then
+            task.spawn(function()
+                local t = 0;
+                while getgenv().rainbow_mode do
+                    t = (t + 0.002) % 1;
+
+                    if not Library.Themes["Custom"] then
+                        Library.Themes["Custom"] = {};
+                        for k, v in pairs(Library.Themes["Default"]) do
+                            Library.Themes["Custom"][k] = v;
+                        end;
+                    end;
+
+                    local primary = Color3.fromHSV(t, 1, 1);
+                    local secondary = Color3.fromHSV((t + 0.05) % 1, 0.7, 0.8);
+                    local hover = Color3.fromHSV((t + 0.02) % 1, 0.8, 0.6);
+
+                    Library.Themes["Custom"]["Highlight"] = primary;
+                    Library.Themes["Custom"]["Selected"] = secondary;
+                    Library.Themes["Custom"]["Hover"] = hover;
+                    Library.Theme = "Custom";
+                    task.wait();
+                end;
+            end);
+        else
+            Library.Theme = "Default";
+        end;
+    end;
+    Flag = "rainbow_mode";
+})
+
+local color_title = Sections.Custom_Themes:CreateColorPicker({
+    Text = "Icon / Title";
+    Alignment = "Left";
+    Default = Color3.fromRGB(255, 255, 255);
+    ThemeKey = "Title";
+    Flag = "color_title";
+})
+
+local color_background = Sections.Custom_Themes:CreateColorPicker({
+    Text = "Background";
+    Alignment = "Left";
+    Default = Color3.fromRGB(9, 9, 13);
+    ThemeKey = "Background";
+    Flag = "color_background";
+})
+
+local color_background2 = Sections.Custom_Themes:CreateColorPicker({
+    Text = "Background2";
+    Alignment = "Left";
+    Default = Color3.fromRGB(10, 10, 15);
+    ThemeKey = "Background2";
+    Flag = "color_background2";
+})
+
+local color_tone = Sections.Custom_Themes:CreateColorPicker({
+    Text = "Tone";
+    Alignment = "Left";
+    Default = Color3.fromRGB(23, 22, 32);
+    ThemeKey = "Tone";
+    Flag = "color_tone";
+})
+
+local color_accent1 = Sections.Custom_Themes:CreateColorPicker({
+    Text = "Accent";
+    Alignment = "Left";
+    Default = Color3.fromRGB(19, 19, 23);
+    ThemeKey = "Accent1";
+    Flag = "color_accent1";
+})
+
+local color_highlight = Sections.Custom_Themes:CreateColorPicker({
+    Text = "Highlight";
+    Alignment = "Left";
+    Default = Color3.fromRGB(121, 115, 234);
+    ThemeKey = "Highlight";
+    Flag = "color_highlight";
+})
+
+local color_hover = Sections.Custom_Themes:CreateColorPicker({
+    Text = "Hover";
+    Alignment = "Left";
+    Default = Color3.fromRGB(77, 75, 116);
+    ThemeKey = "Hover";
+    Flag = "color_hover";
+})
+
+local color_selected = Sections.Custom_Themes:CreateColorPicker({
+    Text = "Selected";
+    Alignment = "Left";
+    Default = Color3.fromRGB(117, 113, 175);
+    ThemeKey = "Selected";
+    Flag = "color_selected";
+})
+
+local color_text = Sections.Custom_Themes:CreateColorPicker({
+    Text = "Text";
+    Alignment = "Left";
+    Default = Color3.fromRGB(199, 199, 199);
+    ThemeKey = "Text";
+    Flag = "color_text";
+})
+
+local color_subtext = Sections.Custom_Themes:CreateColorPicker({
+    Text = "Subtext";
+    Alignment = "Left";
+    Default = Color3.fromRGB(95, 95, 95);
+    ThemeKey = "Subtext";
+    Flag = "color_subtext";
+})
+
+local color_icons = Sections.Custom_Themes:CreateColorPicker({
+    Text = "Icons";
+    Alignment = "Left";
+    Default = Color3.fromRGB(199, 199, 199);
+    ThemeKey = "Icons";
+    Flag = "color_icons";
+})
+
+local auto_roll; auto_roll = Sections.Farming:CreateToggle({
+    Text = "Auto Roll";
+    Subtext = "";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(Value)
+        getgenv().auto_roll = Value;
+
+        if Value then 
+            task.spawn(function()
+                task.wait();
+                SLIME:auto_roll(Value);
+            end);
+        end;
+    end;
+    Flag = "auto_roll";
+})
+
+local instant_roll; instant_roll = Sections.Farming:CreateToggle({
+    Text = "Skip Animation";
+    Subtext = "";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(Value)
+        getgenv().instant_roll_enabled = Value;
+    end;
+    Flag = "instant_roll";
+})
+
+local auto_equip_best; auto_equip_best = Sections.Farming:CreateToggle({
+    Text = "Auto Equip Best";
+    Subtext = "";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(Value)
+        getgenv().auto_equip_best = Value;
+
+        if Value then
+            task.spawn(function()
+                task.wait();
+                SLIME:auto_equip_best(Value);
+            end);
+        end;
+    end;
+    Flag = "auto_equip_best";
+})
+
+local auto_rebirth; auto_rebirth = Sections.Buying:CreateToggle({
+    Text = "Auto Rebirth";
+    Subtext = "";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(Value)
+        getgenv().auto_rebirth = Value;
+
+        if Value then 
+            task.spawn(function()
+                task.wait();
+                SLIME:auto_rebirth(Value);
+            end);
+        end;
+    end;
+    Flag = "auto_rebirth";
+})
+
+local auto_buy_zone; auto_buy_zone = Sections.Buying:CreateToggle({
+    Text = "Auto Buy Zones";
+    Subtext = "";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(Value)
+        getgenv().auto_buy_zone = Value;
+
+        if Value then
+            task.spawn(function()
+                task.wait();
+                SLIME:auto_buy_zone(Value);
+            end);
+        end;
+    end;
+    Flag = "auto_buy_zone";
+})
+
+local zone_choices = { "Furthest" };
+local zone_max = zones.getMaxZone();
+for i = 1, zone_max do
+    local zone = zones.getZone(i);
+    if zone and zone["name"] then
+        table.insert(zone_choices, tostring(zone["name"]));
+    end;
+end;
+
+local teleport_zone_dropdown; teleport_zone_dropdown = Sections.Travel:CreateDropdown({
+    Text = "Teleport Zone";
+    Subtext = "";
+    Alignment = "Left";
+    Choices = zone_choices;
+    Multi = false;
+    Default = "Furthest";
+    Callback = function(Value)
+        getgenv().teleport_zone_selected = Value;
+    end;
+    Flag = "teleport_zone";
+})
+
+local teleport_zone_button; teleport_zone_button = Sections.Travel:CreateButton({
+    Text = "Teleport to Zone";
+    Alignment = "Left";
+    Callback = function()
+        local selected = getgenv().teleport_zone_selected or "Furthest";
+
+        if selected == "Furthest" then
+            for i = zones.getMaxZone(), 1, -1 do
+                local ok, result = pcall(function()
+                    return networker_0_3_1.ZonesService.RemoteFunction:InvokeServer("requestTeleportZone", i);
+                end);
+                if ok and result == true then
+                    break;
+                end;
+            end;
+        else
+            for i = 1, zones.getMaxZone() do
+                local zone = zones.getZone(i);
+                if zone and zone["name"] == selected then
+                    networker_0_3_1.ZonesService.RemoteFunction:InvokeServer("requestTeleportZone", i);
+                    break;
+                end;
+            end;
+        end;
+    end;
+})
+
+local auto_teleport_zone; auto_teleport_zone = Sections.Travel:CreateToggle({
+    Text = "Auto Teleport Zone";
+    Subtext = "";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(Value)
+        getgenv().auto_teleport_zone = Value;
+
+        if Value then
+            task.spawn(function()
+                task.wait();
+                SLIME:auto_teleport_zone(Value);
+            end);
+        end;
+    end;
+    Flag = "auto_teleport_zone";
+})
+
+local auto_collect; auto_collect = Sections.Miscellaneous:CreateToggle({
+    Text = "Auto Collect Coins";
+    Subtext = "";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(Value)
+        getgenv().auto_collect_enabled = Value;
+
+        task.spawn(function()
+            while getgenv().auto_collect_enabled do
+                local ok, err = pcall(function()
+                    for _, v in next, workspace:GetDescendants() do
+                        if v.ClassName == "Part" and v.Name == "CoinPickup" and v.Parent then
+                            pcall(function()
+                                firetouchinterest(v, humanoidrootpart, true);
+                                task.wait();
+                                firetouchinterest(v, humanoidrootpart, false);
+                                v.CFrame = humanoidrootpart.CFrame;
+                            end);
+                        end;
+                    end;
+                end);
+                task.wait();
+            end;
+        end);
+    end;
+    Flag = "auto_collect_coins";
+})
+
+local auto_pickup_loot; auto_pickup_loot = Sections.Miscellaneous:CreateToggle({
+    Text = "Auto Pickup Loot";
+    Subtext = "";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(Value)
+        getgenv().auto_pickup_loot = Value;
+
+        if Value then
+            task.spawn(function()
+                task.wait();
+                SLIME:auto_pickup_loot(Value);
+            end);
+        end;
+    end;
+    Flag = "auto_pickup_loot";
+})
+
+local auto_claim_index; auto_claim_index = Sections.Miscellaneous:CreateToggle({
+    Text = "Auto Claim Index";
+    Subtext = "";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(Value)
+        getgenv().auto_claim_index = Value;
+
+        if Value then
+            task.spawn(function()
+                task.wait();
+                SLIME:auto_claim_index(Value);
+            end);
+        end;
+    end;
+    Flag = "auto_claim_index";
+})
+
+local auto_claim_offline; auto_claim_offline = Sections.Miscellaneous:CreateToggle({
+    Text = "Auto Claim Offline Rewards";
+    Subtext = "";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(Value)
+        getgenv().auto_claim_offline = Value;
+
+        if Value then
+            task.spawn(function()
+                task.wait();
+                SLIME:auto_claim_offline(Value);
+            end);
+        end;
+    end;
+    Flag = "auto_claim_offline";
+})
+
+local redeem_codes; redeem_codes = Sections.Miscellaneous:CreateButton({
+    Text = "Redeem Codes";
+    Alignment = "Left";
+    Callback = function()
+        redeem_codes:ChangeText("Redeeming...");
+        task.spawn(function()
+            SLIME:auto_redeem_codes();
+            redeem_codes:ChangeText("Redeem Codes");
+        end);
+    end;
+})
+
+local boostserviceclient = require(replicatedstorage.Source.Features.Boosts.BoostServiceClient);
+local boost_orig_modifiers;
+boost_orig_modifiers = hookfunction(boostserviceclient.getRollStatModifiers, function(self)
+    local result = boost_orig_modifiers(self);
+    if getgenv().boost_luck_enabled then
+        table.insert(result, {
+            ["id"] = "boosts.luck",
+            ["stat"] = "luck",
+            ["mode"] = "multiply",
+            ["value"] = getgenv().boost_luck_value or 2;
+        });
+    end;
+    return result;
+end);
+
+local boost_luck_multiplier; boost_luck_multiplier = Sections.Buffs:CreateSlider({
+    Text = "Luck Multiplier";
+    Subtext = "";
+    Alignment = "Left";
+    Min = 1;
+    Max = 100;
+    Default = 2;
+    Increment = 1;
+    Callback = function(Value)
+        getgenv().boost_luck_value = Value;
+    end;
+    Flag = "boost_luck_multiplier";
+})
+
+local boost_luck; boost_luck = Sections.Buffs:CreateToggle({
+    Text = "Boost Luck";
+    Subtext = "";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(Value)
+        getgenv().boost_luck_enabled = Value;
+    end;
+    Flag = "boost_luck";
+})
+
+local walk_mode; walk_mode = Sections.Combat:CreateDropdown({
+    Text = "Walk Mode";
+    Subtext = "";
+    Alignment = "Left";
+    Choices = { "Walk", "Tween" };
+    Multi = false;
+    Default = "Walk";
+    Flag = "walk_mode";
+})
+
+local auto_farm_slime; auto_farm_slime = Sections.Combat:CreateToggle({
+    Text = "Auto Farm Slime";
+    Subtext = "";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(Value)
+        getgenv().auto_walk_enabled = Value;
+
+        task.spawn(function()
+            local tween;
+            while getgenv().auto_walk_enabled do
+            if not getgenv().zone_teleporting and not getgenv().fruit_teleporting then
+                    local enemy_folder = nil;
+                    for _, v in pairs(workspace:GetChildren()) do
+                        if v.Name:match("^Gameplay") and v:FindFirstChild("Enemies") then
+                            enemy_folder = v:FindFirstChild("Enemies");
+                            break;
+                        end;
+                    end;
+                    local nearest, dist = nil, math.huge;
+                    if enemy_folder then
+                        for _, slime in pairs(enemy_folder:GetChildren()) do
+                            local slime_root = slime:FindFirstChild("RootPart");
+                            if slime_root then
+                                local d = (slime_root.Position - humanoidrootpart.Position).Magnitude;
+                                if d < dist then
+                                    nearest = slime_root;
+                                    dist = d;
+                                end;
+                            end;
+                        end;
+                    end;
+                    if nearest then
+                        local mode = walk_mode and walk_mode.Value or "Walk";
+                        if mode == "Tween" then
+                            if tween then tween:Cancel(); end;
+                            tween = game:GetService("TweenService"):Create(
+                                humanoidrootpart,
+                                TweenInfo.new(0.3, Enum.EasingStyle.Linear),
+                                { CFrame = CFrame.new(nearest.Position - (nearest.Position - humanoidrootpart.Position).Unit * 3) }
+                            );
+                            tween:Play();
+                        else
+                            local humanoid = character:FindFirstChildOfClass("Humanoid");
+                            if humanoid then
+                                humanoid:MoveTo(nearest.Position);
+                            end;
+                        end;
+                    end;
+                end;
+                task.wait(.5);
+            end;
+            if tween then tween:Cancel(); end;
+        end);
+    end;
+    Flag = "auto_walk";
+})
+
+local auto_slime_gun; auto_slime_gun = Sections.Combat:CreateToggle({
+    Text = "Auto Slime Gun";
+    Subtext = "";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(Value)
+        getgenv().auto_slime_gun = Value;
+
+        if Value then
+            task.spawn(function()
+                task.wait();
+                SLIME:auto_slime_gun(Value);
+            end);
+        end;
+    end;
+    Flag = "auto_slime_gun";
+})
+
+local gun_orig_firerate;
+gun_orig_firerate = hookfunction(goop_gun_utils.getFireRate, function(upgrades)
+    local result = gun_orig_firerate(upgrades);
+    if getgenv().boost_firerate_enabled then
+        return (getgenv().boost_firerate_value or 2) * result;
+    end;
+    return result;
+end);
+
+local gun_orig_range;
+gun_orig_range = hookfunction(goop_gun_utils.getRange, function(upgrades)
+    local result = gun_orig_range(upgrades);
+    if getgenv().boost_range_enabled then
+        return (getgenv().boost_range_value or 100);
+    end;
+    return result;
+end);
+
+local boost_firerate_multiplier; boost_firerate_multiplier = Sections.Combat:CreateSlider({
+    Text = "Fire Rate Multiplier";
+    Alignment = "Left";
+    Default = 0;
+    Callback = function(Value)
+        getgenv().boost_firerate_value = Value;
+    end;
+    Flag = "boost_firerate_multiplier";
+    Floats = 0; 
+    Limits = { 0, 5 }; 
+    Increment = 1;
+})
+
+local boost_firerate; boost_firerate = Sections.Combat:CreateToggle({
+    Text = "Boost Fire Rate";
+    Subtext = "";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(Value)
+        getgenv().boost_firerate_enabled = Value;
+    end;
+    Flag = "boost_firerate";
+})
+
+local boost_range_value; boost_range_value = Sections.Combat:CreateSlider({
+    Text = "Range Override";
+    Alignment = "Left";
+    Default = 1;
+    Callback = function(Value)
+        getgenv().boost_range_value = Value;
+    end;
+    Flag = "boost_range_value";
+    Floats = 1; 
+    Limits = { 100, 500 }; 
+    Increment = 5;
+})
+
+local boost_range; boost_range = Sections.Combat:CreateToggle({
+    Text = "Boost Range";
+    Subtext = "";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(Value)
+        getgenv().boost_range_enabled = Value;
+    end;
+    Flag = "boost_range";
+})
+
+getgenv().upgrade_priority_label = Sections.Upgrades:CreateLabel({
+    Text = "Bought: 0 upgrades";
+    Alignment = "Left";
+});
+
+local upgrade_priority_dropdown; upgrade_priority_dropdown = Sections.Upgrades:CreateDropdown({
+    Text = "Priority";
+    Subtext = "";
+    Alignment = "Left";
+    Choices = { "All", "Luck", "Roll Speed", "Coin Income", "Enemy Count", "Slots", "Goop", "Overkill", "Magnet", "Loot", "Slime Gun" };
+    Multi = false;
+    Default = "All";
+    Callback = function(Value)
+        getgenv().upgrade_priority = Value;
+    end;
+    Flag = "upgrade_priority";
+})
+
+local auto_upgrade; auto_upgrade = Sections.Upgrades:CreateToggle({
+    Text = "Auto Upgrade Tree";
+    Subtext = "";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(Value)
+        getgenv().auto_upgrade = Value;
+
+        if Value then
+            task.spawn(function()
+                task.wait();
+                SLIME:auto_upgrade(Value);
+            end);
+        end;
+    end;
+    Flag = "auto_upgrade";
+})
+
+local auto_boost_luck; auto_boost_luck = Sections.Boost:CreateToggle({
+    Text = "Luck";
+    Subtext = "";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(Value)
+        getgenv().auto_boost_luck = Value;
+    end;
+    Flag = "auto_boost_luck";
+})
+
+local auto_boost_ultra_luck; auto_boost_ultra_luck = Sections.Boost:CreateToggle({
+    Text = "Ultra Luck";
+    Subtext = "";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(Value)
+        getgenv().auto_boost_ultra_luck = Value;
+    end;
+    Flag = "auto_boost_ultra_luck";
+})
+
+local auto_boost_currency; auto_boost_currency = Sections.Boost:CreateToggle({
+    Text = "Currency";
+    Subtext = "";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(Value)
+        getgenv().auto_boost_currency = Value;
+    end;
+    Flag = "auto_boost_currency";
+})
+
+local auto_boost_roll_speed; auto_boost_roll_speed = Sections.Boost:CreateToggle({
+    Text = "Roll Speed";
+    Subtext = "";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(Value)
+        getgenv().auto_boost_roll_speed = Value;
+    end;
+    Flag = "auto_boost_roll_speed";
+})
+
+local auto_use_boost; auto_use_boost = Sections.Boost:CreateToggle({
+    Text = "Auto Use Boosts";
+    Subtext = "";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(Value)
+        getgenv().auto_use_boost = Value;
+
+        if Value then
+            task.spawn(function()
+                task.wait();
+                SLIME:auto_use_boost(Value);
+            end);
+        end;
+    end;
+    Flag = "auto_use_boost";
+})
+
+local roll_log; roll_log = Sections.Farming:CreateToggle({
+    Text = "Roll Notifications";
+    Subtext = "";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(Value)
+        getgenv().roll_log_enabled = Value;
+    end;
+    Flag = "roll_log";
+})
+
+local roll_webhook; roll_webhook = Sections.Webhook:CreateInput({ 
+    Text = "Webhook URL";
+    Subtext = "discord webhook url only";
+    Alignment = "Center";
+    Default = "";
+    Callback = function(Value)
+        getgenv().roll_webhook_url = Value;
+    end;
+    Flag = "roll_webhook_url";
+});
+
+local roll_webhook_user_id; roll_webhook_user_id = Sections.Webhook:CreateInput({
+    Text = "User ID to Ping";
+    Subtext = "your discord user id";
+    Alignment = "Center";
+    Default = "";
+    Callback = function(Value)
+        getgenv().roll_webhook_userid = Value;
+    end;
+    Flag = "roll_webhook_userid";
+});
+
+local roll_webhook_odds; roll_webhook_odds = Sections.Webhook:CreateInput({
+    Text = "Min Odds (1/X)";
+    Subtext = "e.g. 10000 = 1/10000";
+    Alignment = "Center";
+    Default = "10000";
+    Callback = function(Value)
+        local num = tonumber(Value);
+        getgenv().roll_webhook_min_odds = (num and num > 0) and num or 10000;
+    end;
+    Flag = "roll_webhook_odds";
+});
+
+local roll_webhook_ping; roll_webhook_ping = Sections.Webhook:CreateToggle({
+    Text = "Ping on Rare Roll";
+    Subtext = "";
+    Alignment = "Left";
+    Default = true;
+    Callback = function(Value)
+        getgenv().roll_webhook_ping = Value;
+    end;
+    Flag = "roll_webhook_ping";
+});
+
+local roll_webhook_enabled; roll_webhook_enabled = Sections.Webhook:CreateToggle({
+    Text = "Send Rare Slimes";
+    Subtext = "";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(Value)
+        getgenv().roll_webhook_enabled = Value;
+    end;
+    Flag = "roll_webhook_enabled";
+});
+
+--:: Loading Dependencies ::--
+SLIME:entry();
+
+Library.Paths = {
+    ["Folder"] = "Lotus",
+    ["Secondary"] = tostring(game.PlaceId),
+    ["Data"] = "Data",
+    ["Themes"] = "Themes",
+};
+
+Library:Notify("Loaded Lotus for ".. tostring(SLIME:get_game()) .. "\nwith Build: New Testing", 10, "Notification");
+Library:Load();
+
+--[[[
+
+
+
+    
+]]
