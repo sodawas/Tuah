@@ -1,4 +1,4 @@
--- KeyUI.lua  (v3)
+-- KeyUI.lua  (v4)
 -- Dark theme, purple accent, lotus icon
 -- Integrated with Junkie key system (jnkie.com)
 -- Usage:
@@ -9,7 +9,7 @@
 --
 --   local KeyUI = loadstring(...)()
 --   KeyUI:Prompt({
---       Junkie   = Junkie,          -- required for live validation
+--       Junkie   = Junkie,
 --       Title    = "Authentication",
 --       Subtitle = "Enter your license key to continue.",
 --       KeyLink  = "https://example.com/getkey",
@@ -42,7 +42,6 @@ local T = {
     Title       = RGB(255, 255, 255),
     Success     = RGB(80,  200, 140),
     Error       = RGB(220, 75,  75),
-    Black       = RGB(0,   0,   0),
 }
 
 local FONT      = Font.new("rbxasset://fonts/families/Arimo.json",    Enum.FontWeight.Medium,   Enum.FontStyle.Normal)
@@ -91,12 +90,11 @@ end
 local EI  = TweenInfo.new(.15, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut)
 local EI2 = TweenInfo.new(.30, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut)
 
--- ── File system helpers (saved key) ───────────────────────────────────────
+-- ── File system helpers ────────────────────────────────────────────────────
 local function hasFS()
     return pcall(function() return type(writefile) == "function" end)
         and pcall(function() return type(readfile)  == "function" end)
 end
-
 local fsOk = hasFS()
 
 local function saveKey(key)
@@ -107,7 +105,7 @@ end
 local function loadKey()
     if not fsOk then return nil end
     local ok, v = pcall(function() return readfile("_junkie_key.txt") end)
-    return (ok and v ~= "") and v or nil
+    return (ok and v and v ~= "") and v or nil
 end
 
 local function clearKey()
@@ -123,7 +121,7 @@ function KeyUI:Prompt(OPTIONS)
     local title     = OPTIONS.Title    or "Authentication"
     local subtitle  = OPTIONS.Subtitle or "Enter your license key to continue."
     local keyLink   = OPTIONS.KeyLink  or "https://example.com/getkey"
-    local Junkie    = OPTIONS.Junkie   -- optional; if nil, falls back to non-empty check
+    local Junkie    = OPTIONS.Junkie
 
     -- ── ScreenGui ──────────────────────────────────────────────────────────
     local SG = Make("ScreenGui", {
@@ -150,21 +148,7 @@ function KeyUI:Prompt(OPTIONS)
     Corner(Win, 10)
     Stroke(Win, T.Accent1, 1)
 
-    -- ── Drop shadow (frame-based, no image asset needed) ──────────────────
-    for i = 1, 4 do
-        local s = Make("Frame", {
-            Parent              = Win,
-            AnchorPoint         = Vector2.new(.5, .5),
-            Position            = UDim2.new(.5, 0, .5, 6 + i * 2),
-            Size                = UDim2.new(1, 14 + i * 8, 1, 14 + i * 8),
-            BackgroundColor3    = T.Black,
-            BackgroundTransparency = 0.62 + i * 0.09,
-            ZIndex              = 9 - i,
-        })
-        Corner(s, 16)
-    end
-
-    -- slide-in tween
+    -- slide-in tween (no shadow frames at all)
     TW(Win,
         TweenInfo.new(.5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
         { Position = UDim2.new(.5, 0, .5, 0) }
@@ -180,7 +164,7 @@ function KeyUI:Prompt(OPTIONS)
     })
     Corner(Left, 10)
 
-    -- square off the right-side corners so it merges with Right panel
+    -- square off right-side corners so sidebar merges flush with right panel
     Make("Frame", {
         Parent           = Left,
         AnchorPoint      = Vector2.new(1, 0),
@@ -199,47 +183,23 @@ function KeyUI:Prompt(OPTIONS)
         ZIndex           = 12,
     })
 
-    -- ── Logo area (top 160px of sidebar) ──────────────────────────────────
+    -- ── Logo area — transparent, no circles, just the icon ─────────────────
     local LogoFrame = Make("Frame", {
         Parent               = Left,
         AnchorPoint          = Vector2.new(.5, 0),
         Position             = UDim2.new(.5, 0, 0, 0),
         Size                 = UDim2.new(1, 0, 0, 160),
-        BackgroundTransparency = 1,   -- <-- transparent; no dark square
+        BackgroundTransparency = 1,
         ZIndex               = 12,
     })
 
-    -- subtle glow circle — purely decorative, fully transparent background on parent
-    local GlowCircle = Make("Frame", {
-        Parent               = LogoFrame,
-        AnchorPoint          = Vector2.new(.5, .5),
-        Position             = UDim2.new(.5, 0, .5, -8),
-        Size                 = UDim2.new(0, 90, 0, 90),
-        BackgroundColor3     = T.Highlight,
-        BackgroundTransparency = .84,
-        ZIndex               = 12,
-    })
-    Corner(GlowCircle, 100)
-
-    -- second, slightly larger glow ring for depth
-    local GlowRing = Make("Frame", {
-        Parent               = LogoFrame,
-        AnchorPoint          = Vector2.new(.5, .5),
-        Position             = UDim2.new(.5, 0, .5, -8),
-        Size                 = UDim2.new(0, 112, 0, 112),
-        BackgroundColor3     = T.Highlight,
-        BackgroundTransparency = .94,
-        ZIndex               = 11,
-    })
-    Corner(GlowRing, 100)
-
-    -- lotus icon — NO background frame, just the ImageLabel directly
+    -- Lotus icon — big, no background, no circle
     Make("ImageLabel", {
         Parent               = LogoFrame,
         AnchorPoint          = Vector2.new(.5, .5),
         Position             = UDim2.new(.5, 0, .5, -8),
-        Size                 = UDim2.new(0, 68, 0, 68),
-        BackgroundTransparency = 1,   -- fully transparent
+        Size                 = UDim2.new(0, 96, 0, 96),
+        BackgroundTransparency = 1,
         Image                = LOTUS_IMG,
         ImageColor3          = T.Title,
         ZIndex               = 13,
@@ -403,13 +363,14 @@ function KeyUI:Prompt(OPTIONS)
         ZIndex               = 12,
     })
 
-    -- ── Input box ─────────────────────────────────────────────────────────
+    -- ── Input box ──────────────────────────────────────────────────────────
     local InputBack = Make("Frame", {
         Parent           = Right,
         Position         = UDim2.new(0, 0, 0, 120),
         Size             = UDim2.new(1, 0, 0, 36),
         BackgroundColor3 = T.Tone,
         ZIndex           = 12,
+        ClipsDescendants = true,   -- ensures text cannot visually overflow the box
     })
     Corner(InputBack, 6)
     local InputStroke = Stroke(InputBack, T.Accent1, 1)
@@ -426,77 +387,68 @@ function KeyUI:Prompt(OPTIONS)
         ZIndex               = 13,
     })
 
+    -- The actual TextBox — TextTruncate clips long text, no eye-toggle so full width used
     local InputBox = Make("TextBox", {
         Parent               = InputBack,
         Position             = UDim2.new(0, 33, 0, 0),
-        Size                 = UDim2.new(1, -68, 1, 0),
+        Size                 = UDim2.new(1, -44, 1, 0),   -- right edge flush (no eye btn)
         BackgroundTransparency = 1,
         Text                 = "",
-        PlaceholderText      = "Paste your key here…",
+        -- Placeholder shows the key format style
+        PlaceholderText      = "lotus-XXXX-XXXXXXXX-XXXXXXX-XXXXXXX",
         TextColor3           = T.Text,
         PlaceholderColor3    = T.Subtext,
         FontFace             = FONT,
-        TextSize             = 13,
+        TextSize             = 12,
         TextXAlignment       = Enum.TextXAlignment.Left,
+        TextTruncate         = Enum.TextTruncate.AtEnd,   -- clips overflow, no wrapping needed
         ClearTextOnFocus     = false,
         ZIndex               = 13,
+        -- Pre-fill highlight text so user sees the example key on focus
+        -- (Roblox doesn't have a direct HighlightText API, we set it as Text
+        --  and clear on first edit — see logic below)
     })
 
-    -- eye toggle
-    local masked = true
-    local EyeBtn = Make("ImageButton", {
-        Parent               = InputBack,
-        AnchorPoint          = Vector2.new(1, .5),
-        Position             = UDim2.new(1, -10, .5, 0),
-        Size                 = UDim2.new(0, 14, 0, 14),
-        BackgroundTransparency = 1,
-        Image                = "rbxassetid://6035047690",
-        ImageColor3          = T.Subtext,
-        ZIndex               = 14,
-    })
+    -- Pre-fill the input with the highlight key so it's visible immediately;
+    -- clear it the moment the user starts typing their own key.
+    local HIGHLIGHT_KEY = "lotus-e20a932e-104c-4a83-b7de-83418e2667cc"
+    local highlightActive = true
+    InputBox.Text      = HIGHLIGHT_KEY
+    InputBox.TextColor3 = T.Subtext   -- muted so it looks like a hint
 
-    local MaskLabel = Make("TextLabel", {
-        Parent               = InputBack,
-        Position             = UDim2.new(0, 33, 0, 0),
-        Size                 = UDim2.new(1, -68, 1, 0),
-        BackgroundTransparency = 1,
-        Text                 = "",
-        TextColor3           = T.Text,
-        FontFace             = FONT,
-        TextSize             = 13,
-        TextXAlignment       = Enum.TextXAlignment.Left,
-        ZIndex               = 14,
-    })
-
-    local function UpdateMask()
-        if masked then
-            MaskLabel.Text            = string.rep("•", #InputBox.Text)
-            MaskLabel.Visible         = true
-            InputBox.TextTransparency = 1
-        else
-            MaskLabel.Visible         = false
-            InputBox.TextTransparency = 0
+    InputBox:GetPropertyChangedSignal("Text"):Connect(function()
+        if highlightActive and InputBox.Text ~= HIGHLIGHT_KEY then
+            highlightActive     = false
+            -- If they didn't fully delete it, strip the old highlight text
+            -- (handles paste-over or single-char edits)
+            if InputBox.Text:find(HIGHLIGHT_KEY, 1, true) then
+                local cleaned = InputBox.Text:gsub(HIGHLIGHT_KEY, "")
+                InputBox.Text = cleaned
+            end
+            InputBox.TextColor3 = T.Text
+        elseif not highlightActive and InputBox.Text == "" then
+            -- They cleared everything — restore highlight hint
+            highlightActive     = true
+            InputBox.Text       = HIGHLIGHT_KEY
+            InputBox.TextColor3 = T.Subtext
         end
-    end
-    InputBox:GetPropertyChangedSignal("Text"):Connect(UpdateMask)
-    UpdateMask()
-
-    EyeBtn.MouseButton1Up:Connect(function()
-        masked             = not masked
-        EyeBtn.ImageColor3 = masked and T.Subtext or T.Highlight
-        UpdateMask()
     end)
 
     InputBox.Focused:Connect(function()
         TW(InputStroke, EI, { Color = T.Hover })
         TW(InputBack,   EI, { BackgroundColor3 = RGB(28, 27, 40) })
+        -- Select all so the user can immediately paste over the highlight key
+        if highlightActive then
+            InputBox:CaptureFocus()
+        end
     end)
+
     InputBox.FocusLost:Connect(function()
         TW(InputStroke, EI, { Color = T.Accent1 })
         TW(InputBack,   EI, { BackgroundColor3 = T.Tone })
     end)
 
-    -- ── Hint / error text ─────────────────────────────────────────────────
+    -- ── Hint / error label ─────────────────────────────────────────────────
     local HintLabel = Make("TextLabel", {
         Parent               = Right,
         Position             = UDim2.new(0, 0, 0, 161),
@@ -510,7 +462,7 @@ function KeyUI:Prompt(OPTIONS)
         ZIndex               = 12,
     })
 
-    -- ── Button row ────────────────────────────────────────────────────────
+    -- ── Button row ─────────────────────────────────────────────────────────
     local BtnRow = Make("Frame", {
         Parent               = Right,
         AnchorPoint          = Vector2.new(0, 1),
@@ -574,7 +526,6 @@ function KeyUI:Prompt(OPTIONS)
         TW(GetKeyStroke, EI, { Color = T.Highlight })
     end)
     GetKeyClick.MouseButton1Up:Connect(function()
-        -- Try Junkie's get_key_link first, fall back to static keyLink
         local link = keyLink
         if Junkie and Junkie.get_key_link then
             local ok, result = pcall(function() return Junkie.get_key_link() end)
@@ -605,7 +556,6 @@ function KeyUI:Prompt(OPTIONS)
     Corner(AuthBtn, 6)
     local AuthStroke = Stroke(AuthBtn, T.Accent1, 1)
 
-    -- fill bar
     local AuthFill = Make("Frame", {
         Parent           = AuthBtn,
         Size             = UDim2.new(0, 0, 1, 0),
@@ -662,7 +612,7 @@ function KeyUI:Prompt(OPTIONS)
             RowLocked.Visible = true
 
         elseif state == "success" then
-            RowOK.Visible = true
+            RowOK.Visible  = true
             AuthLabel.Text = "Verified  ✓"
             TW(AuthStroke, EI, { Color = T.Success })
             TW(AuthFill, TweenInfo.new(.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
@@ -672,9 +622,9 @@ function KeyUI:Prompt(OPTIONS)
             end)
 
         elseif state == "fail" then
-            RowFail.Visible    = true
-            AuthLabel.Text     = "Try Again"
-            HintLabel.Text     = "Key not recognised — please check and retry."
+            RowFail.Visible = true
+            AuthLabel.Text  = "Try Again"
+            HintLabel.Text  = "Key not recognised — please check and retry."
             TW(InputStroke, EI, { Color = T.Error })
             task.delay(.9, function()
                 TW(InputStroke, EI, { Color = T.Accent1 })
@@ -685,11 +635,18 @@ function KeyUI:Prompt(OPTIONS)
     SetState("idle")
 
     -- ── Submit logic ───────────────────────────────────────────────────────
+    local function getEnteredKey()
+        -- Return nil if the box still holds the highlight placeholder
+        if highlightActive then return nil end
+        local k = InputBox.Text:gsub("%s+", "")
+        return (k ~= "") and k or nil
+    end
+
     local function Submit()
         if processing then return end
-        local key = InputBox.Text
+        local key = getEnteredKey()
 
-        if key == "" then
+        if not key then
             HintLabel.Text = "Enter a key first."
             TW(InputStroke, TweenInfo.new(.07), { Color = T.Error })
             task.delay(.7, function()
@@ -718,7 +675,6 @@ function KeyUI:Prompt(OPTIONS)
             local ok = false
 
             if Junkie and Junkie.check_key then
-                -- Live Junkie validation
                 local s, result = pcall(function() return Junkie.check_key(key) end)
                 if s and result then
                     if type(result) == "boolean" then
@@ -730,9 +686,8 @@ function KeyUI:Prompt(OPTIONS)
                     end
                 end
             else
-                -- Fallback: just check non-empty
                 task.wait(.7)
-                ok = (key ~= "")
+                ok = true   -- no Junkie = dev mode, accept anything
             end
 
             stop       = true
@@ -768,35 +723,36 @@ function KeyUI:Prompt(OPTIONS)
     task.spawn(function()
         local saved = loadKey()
         if not saved then return end
+        if not (Junkie and Junkie.check_key) then return end
 
-        if Junkie and Junkie.check_key then
-            local s, result = pcall(function() return Junkie.check_key(saved) end)
-            local valid = false
-            if s and result then
-                if type(result) == "boolean" then
-                    valid = result
-                elseif type(result) == "table" then
-                    valid = result.valid == true
-                        or result.message == "KEY_VALID"
-                        or result.message == "KEYLESS"
-                end
+        local s, result = pcall(function() return Junkie.check_key(saved) end)
+        local valid = false
+        if s and result then
+            if type(result) == "boolean" then
+                valid = result
+            elseif type(result) == "table" then
+                valid = result.valid == true
+                    or result.message == "KEY_VALID"
+                    or result.message == "KEYLESS"
             end
+        end
 
-            if valid then
-                InputBox.Text = saved
-                processing    = true
-                SetState("success")
-                task.wait(1.3)
-                TW(Win, TweenInfo.new(.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
-                    { Position = UDim2.new(.5, 0, .5, -40) })
-                TW(Win, TweenInfo.new(.35), { BackgroundTransparency = 1 })
-                task.wait(.42)
-                SG:Destroy()
-                task.spawn(onSuccess, saved)
-            else
-                -- Saved key expired or invalid — clear it silently
-                clearKey()
-            end
+        if valid then
+            -- Swap out highlight text for the saved key
+            highlightActive     = false
+            InputBox.Text       = saved
+            InputBox.TextColor3 = T.Text
+            processing          = true
+            SetState("success")
+            task.wait(1.3)
+            TW(Win, TweenInfo.new(.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+                { Position = UDim2.new(.5, 0, .5, -40) })
+            TW(Win, TweenInfo.new(.35), { BackgroundTransparency = 1 })
+            task.wait(.42)
+            SG:Destroy()
+            task.spawn(onSuccess, saved)
+        else
+            clearKey()
         end
     end)
 
