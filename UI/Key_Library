@@ -395,7 +395,7 @@ function KeyUI:Prompt(OPTIONS)
         BackgroundTransparency = 1,
         Text                 = "",
         -- Placeholder shows the key format style
-        PlaceholderText      = "lotus-XXXX-XXXXXXXX-XXXXXXX-XXXXXXX",
+        PlaceholderText      = "buried-XXXX-XXXX-XXXX-XXX",
         TextColor3           = T.Text,
         PlaceholderColor3    = T.Subtext,
         FontFace             = FONT,
@@ -411,7 +411,7 @@ function KeyUI:Prompt(OPTIONS)
 
     -- Pre-fill the input with the highlight key so it's visible immediately;
     -- clear it the moment the user starts typing their own key.
-    local HIGHLIGHT_KEY = "lotus-e20a932e-104c-4a83-b7de-83418e2667cc"
+    local HIGHLIGHT_KEY = "buried-XXXX-XXXX-XXXX-XXX"
     local highlightActive = true
     InputBox.Text      = HIGHLIGHT_KEY
     InputBox.TextColor3 = T.Subtext   -- muted so it looks like a hint
