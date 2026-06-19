@@ -345,9 +345,12 @@ local pillDefs = {
 }
 
     local PILL_H = 105
+    local WHY_Y = 230
+    local DESC_Y = WHY_Y + 20
+    local PILLS_Y = DESC_Y + 34
     local PillRow = New("Frame", {
         Parent               = CI,
-        Position             = UDim2.new(0, 0, 0, 272),
+        Position = UDim2.new(0,0,0,PILLS_Y),
         Size                 = UDim2.new(0, pillW*3+12, 0, PILL_H),
         BackgroundTransparency = 1,
         ZIndex               = 14,
