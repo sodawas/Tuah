@@ -340,22 +340,38 @@ function KeyUI:Prompt(OPTIONS)
 
     for _, pd in ipairs(pillDefs) do
         local pill = New("Frame", { Parent=PillRow,
-            Size=UDim2.new(0,pillW,0,50),
+            Size=UDim2.new(0,pillW,0,52),
             BackgroundColor3=T.Tone, ZIndex=14 })
         Corner(pill, 7)
         Stroke(pill, T.Border, 1)
-        New("ImageLabel", { Parent=pill, AnchorPoint=Vector2.new(0,.5),
-            Position=UDim2.new(0,10,.5,-8), Size=UDim2.new(0,14,0,14),
-            BackgroundTransparency=1, Image=pd.icon, ImageColor3=T.Highlight, ZIndex=15 })
-        New("TextLabel", { Parent=pill, Position=UDim2.new(0,28,0,8),
-            Size=UDim2.new(1,-32,0,14), BackgroundTransparency=1, Text=pd.head,
+
+        -- Top row: icon + heading side by side at y=10
+        New("ImageLabel", {
+            Parent=pill,
+            Position=UDim2.new(0,10,0,10),
+            Size=UDim2.new(0,14,0,14),
+            BackgroundTransparency=1,
+            Image=pd.icon, ImageColor3=T.Highlight, ZIndex=15,
+        })
+        New("TextLabel", {
+            Parent=pill,
+            Position=UDim2.new(0,28,0,10),
+            Size=UDim2.new(1,-32,0,14),
+            BackgroundTransparency=1, Text=pd.head,
             TextColor3=T.Highlight, FontFace=FONT_BOLD, TextSize=11,
-            TextXAlignment=Enum.TextXAlignment.Left, ZIndex=15 })
-        New("TextLabel", { Parent=pill, Position=UDim2.new(0,10,0,26),
-            Size=UDim2.new(1,-14,0,14), BackgroundTransparency=1, Text=pd.sub,
+            TextXAlignment=Enum.TextXAlignment.Left, ZIndex=15,
+        })
+
+        -- Bottom row: subtext at y=28
+        New("TextLabel", {
+            Parent=pill,
+            Position=UDim2.new(0,10,0,28),
+            Size=UDim2.new(1,-14,0,14),
+            BackgroundTransparency=1, Text=pd.sub,
             TextColor3=T.Subtext, FontFace=FONT, TextSize=10,
             TextXAlignment=Enum.TextXAlignment.Left,
-            TextTruncate=Enum.TextTruncate.AtEnd, ZIndex=15 })
+            TextTruncate=Enum.TextTruncate.AtEnd, ZIndex=15,
+        })
     end
 
     -- Status bar
