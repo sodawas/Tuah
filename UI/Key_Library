@@ -1,4 +1,6 @@
 -- KeyUI.lua (v8)
+
+print("v.08")
 -- Usage:
 --   local Junkie = loadstring(game:HttpGet("https://jnkie.com/sdk/library.lua"))()
 --   Junkie.service = "Lotus" ; Junkie.identifier = "1100894" ; Junkie.provider = "Buried"
