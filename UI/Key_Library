@@ -44,20 +44,20 @@ local FONT_SB   = Font.new("rbxasset://fonts/families/Arimo.json",     Enum.Font
 local LOTUS = "rbxassetid://122142349354490"
 
 local ICONS = {
-    key      = "rbxassetid://6034509993",
+    key      = "rbxassetid://126283489828735",
     shield   = "rbxassetid://6035047245",
     bolt     = "rbxassetid://6031071078",
     star     = "rbxassetid://6035054679",
     grid     = "rbxassetid://6026568247",
-    info     = "rbxassetid://6031076149",   -- changed: document/list icon
+    info     = "rbxassetid://109729627927575",   -- changed: document/list icon
     check    = "rbxassetid://6031094678",
     lock     = "rbxassetid://6023426915",
     close    = "rbxassetid://80084831701712",
-    game     = "rbxassetid://6026568247",
+    game     = "rbxassetid://127960731548043",
     clock    = "rbxassetid://6031076149",
-    support  = "rbxassetid://6035047690",
+    support  = "rbxassetid://90402240222777",
     executor = "rbxassetid://6034684949",
-    version  = "rbxassetid://6031090990",
+    version  = "rbxassetid://81987340537699",
     person   = "rbxassetid://6023426915",
     tag      = "rbxassetid://6031084929",
 }
@@ -325,19 +325,19 @@ function KeyUI:Prompt(OPTIONS)
 
     local pillDefs = {
         {
-            icon  = "rbxassetid://6035047245",
+            icon  = "rbxassetid://126051928248434",
             head  = "Secure",
             sub   = "HWID & account protection",
             color = RGB(100, 180, 255),
         },
         {
-            icon  = "rbxassetid://6031071078",
+            icon  = "rbxassetid://104125730756067",
             head  = "Fast updates",
             sub   = "Always the latest features",
             color = RGB(255, 180, 60),
         },
         {
-            icon  = "rbxassetid://6035054679",
+            icon  = "rbxassetid://134041181497506",
             head  = appTitle .. "+",
             sub   = "Skip keys, unlock perks",
             color = RGB(121, 115, 234),
