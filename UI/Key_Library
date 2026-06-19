@@ -309,7 +309,7 @@ function KeyUI:Prompt(OPTIONS)
         Size=UDim2.new(1,0,0,17), BackgroundTransparency=1, Text="Why a key?",
         TextColor3=T.Title, FontFace=FONT_BOLD, TextSize=13,
         TextXAlignment=Enum.TextXAlignment.Left, ZIndex=14 })
-    New("TextLabel", { Parent=CI, Position=UDim2.new(0,0,0,250),
+    New("TextLabel", { Parent=CI, Position=UDim2.new(0,0,0,252),
         Size=UDim2.new(1,0,0,14), BackgroundTransparency=1,
         Text="Keys help us keep " .. appTitle .. " secure, stable and always up to date.",
         TextColor3=T.Subtext, FontFace=FONT, TextSize=11,
@@ -341,11 +341,11 @@ local pillDefs = {
     },
 }
 
-    local PILL_H = 102
+    local PILL_H = 105
 
     local PillRow = New("Frame", {
         Parent               = CI,
-        Position = UDim2.new(0, 0, 0, 248),
+        Position = UDim2.new(0, 0, 0, 278),
         Size                 = UDim2.new(0, pillW*3+12, 0, PILL_H),
         BackgroundTransparency = 1,
         ZIndex               = 14,
