@@ -54,12 +54,12 @@ local ICONS = {
     lock     = "rbxassetid://6023426915",
     close    = "rbxassetid://80084831701712",
     game     = "rbxassetid://127960731548043",
-    clock    = "rbxassetid://6031076149",
+    clock    = "rbxassetid://112763755345383",
     support  = "rbxassetid://90402240222777",
     executor = "rbxassetid://6034684949",
     version  = "rbxassetid://81987340537699",
-    person   = "rbxassetid://6023426915",
-    tag      = "rbxassetid://6031084929",
+    person   = "rbxassetid://107863861954806",
+    tag      = "rbxassetid://107863861954806",
 }
 
 local function New(class, props)
