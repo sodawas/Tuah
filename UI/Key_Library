@@ -93,9 +93,6 @@ local function clearKey()  if not fsOk then return end; pcall(function() delfile
 
 local function getExecutor()
     if identifyexecutor then return identifyexecutor() end
-    if syn then return "Synapse X" end
-    if fluxus then return "Fluxus" end
-    if KRNL_LOADED then return "KRNL" end
     return "Unknown"
 end
 
@@ -114,9 +111,9 @@ function KeyUI:Prompt(OPTIONS)
     local onSuccess = OPTIONS.Callback  or function() end
     local onFail    = OPTIONS.OnFail    or function() end
     local appTitle  = OPTIONS.Title     or "Buried"
-    local keyLink   = OPTIONS.KeyLink   or "https://example.com/getkey"
-    local appVer    = OPTIONS.Version   or "1.0.0"
-    local appSupp   = OPTIONS.Support   or "discord.gg/lotus"
+    local keyLink   = OPTIONS.KeyLink   or "https://jnkie.com/get-key/buried"
+    local appVer    = OPTIONS.Version   or "1.2.0"
+    local appSupp   = OPTIONS.Support   or "discord.gg/buried"
     local Junkie    = OPTIONS.Junkie
     local allGames  = OPTIONS.Games     or { "Grow a Garden", "Murder Mystery 2", "Blox Fruits", "Slime RNG" }
     local keyGames  = OPTIONS.KeyGames  or allGames
@@ -539,7 +536,7 @@ local pillDefs = {
         { icon=ICONS.executor, label="Executor",    value=getExecutor(),            col=T.Highlight },
         { icon=ICONS.clock,    label="Launched",    value=getTime(),                col=T.Highlight },
         { icon=ICONS.support,  label="Support",     value=appSupp,                  col=T.Highlight },
-        { icon=ICONS.tag,      label="Key Storage", value=fsOk and "Auto-saved" or "Session only", col=T.Highlight },
+        { icon=ICONS.tag,      label="Key Mode", value=fsOk and "Auto saved" or "Session only", col=T.Highlight },
     }
 
     local CARD_H    = 58
