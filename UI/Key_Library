@@ -46,8 +46,8 @@ local LOTUS = "rbxassetid://122142349354490"
 local ICONS = {
     key      = "rbxassetid://126283489828735",
     shield   = "rbxassetid://6035047245",
-    bolt     = "rbxassetid://6031071078",
-    star     = "rbxassetid://6035054679",
+    bolt     = "rbxassetid://127960731548043",
+    star     = "rbxassetid://127960731548043",
     grid     = "rbxassetid://6026568247",
     info     = "rbxassetid://109729627927575",   -- changed: document/list icon
     check    = "rbxassetid://6031094678",
@@ -344,13 +344,11 @@ local pillDefs = {
     },
 }
 
-    local PILL_H = 105
-    local WHY_Y = 230
-    local DESC_Y = WHY_Y + 20
-    local PILLS_Y = DESC_Y + 34
+    local PILL_H = 102
+
     local PillRow = New("Frame", {
         Parent               = CI,
-        Position = UDim2.new(0,0,0,PILLS_Y),
+        Position = UDim2.new(0, 0, 0, 248),
         Size                 = UDim2.new(0, pillW*3+12, 0, PILL_H),
         BackgroundTransparency = 1,
         ZIndex               = 14,
@@ -413,7 +411,7 @@ local pillDefs = {
                 New("TextLabel", {
                     Parent = pill,
                     Position = UDim2.new(0,50,0,33),
-                    Size = UDim2.new(1,-60,0,70),
+                    Size = UDim2.new(1,-60,0,52),
                     BackgroundTransparency = 1,
 
                     Text = pd.sub,
