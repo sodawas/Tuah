@@ -344,7 +344,7 @@ local pillDefs = {
     },
 }
 
-    local PILL_H = 115
+    local PILL_H = 105
     local PillRow = New("Frame", {
         Parent               = CI,
         Position             = UDim2.new(0, 0, 0, 272),
