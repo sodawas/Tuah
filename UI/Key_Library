@@ -225,7 +225,7 @@ function KeyUI:Prompt(OPTIONS)
         TextXAlignment=Enum.TextXAlignment.Left, ZIndex=14 })
     New("TextLabel", { Parent=CI, Position=UDim2.new(0,0,0,30),
         Size=UDim2.new(1,0,0,17), BackgroundTransparency=1,
-        Text="Enter the key you received to unlock " .. appTitle .. ".",
+        Text="Enter the key you received to unlock " .. appTitle .. "",
         TextColor3=T.Subtext, FontFace=FONT, TextSize=12,
         TextXAlignment=Enum.TextXAlignment.Left, ZIndex=14 })
 
@@ -324,19 +324,19 @@ local pillDefs = {
     {
         icon  = "rbxassetid://126051928248434",
         head  = "Secure Protection",
-        sub   = "Your key is securely linked to your account to reduce abuse, prevent unauthorized sharing, and keep Buried safe for everyone.",
+        sub   = "Your key is securely linked to your account to reduce abuse and keep Buried safe for everyone",
         color = RGB(100,180,255),
     },
     {
         icon  = "rbxassetid://104125730756067",
         head  = "Fast Updates",
-        sub   = "Receive every new feature, performance improvement, and bug fix automatically without waiting for public releases.",
+        sub   = "Receive every new feature, performance improvement, and bug fixes!",
         color = RGB(255,180,60),
     },
     {
         icon  = "rbxassetid://134041181497506",
         head  = appTitle .. "+",
-        sub   = "Skip the key system, unlock premium features, and gain access to exclusive perks available only to Buried+ members.",
+        sub   = "Skip the key system and gain access to exclusive perks available only to Buried+ members",
         color = RGB(121,115,234),
     },
 }
