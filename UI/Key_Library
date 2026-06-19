@@ -1,6 +1,4 @@
 -- KeyUI.lua (v8)
-
-print("v.08")
 -- Usage:
 --   local Junkie = loadstring(game:HttpGet("https://jnkie.com/sdk/library.lua"))()
 --   Junkie.service = "Lotus" ; Junkie.identifier = "1100894" ; Junkie.provider = "Buried"
@@ -326,64 +324,115 @@ function KeyUI:Prompt(OPTIONS)
     local pillW     = math.floor((pillAvail - 12) / 3)  -- 12 = 2 gaps of 6
 
     local pillDefs = {
-        { icon=ICONS.shield, head="Secure",        sub="HWID & account protection" },
-        { icon=ICONS.bolt,   head="Fast updates",  sub="Always the latest features" },
-        { icon=ICONS.star,   head=appTitle .. "+", sub="Skip keys, unlock perks" },
+        {
+            icon  = "rbxassetid://6035047245",
+            head  = "Secure",
+            sub   = "HWID & account protection",
+            color = RGB(100, 180, 255),
+        },
+        {
+            icon  = "rbxassetid://6031071078",
+            head  = "Fast updates",
+            sub   = "Always the latest features",
+            color = RGB(255, 180, 60),
+        },
+        {
+            icon  = "rbxassetid://6035054679",
+            head  = appTitle .. "+",
+            sub   = "Skip keys, unlock perks",
+            color = RGB(121, 115, 234),
+        },
     }
 
-    local PillRow = New("Frame", { Parent=CI, Position=UDim2.new(0,0,0,272),
-        Size=UDim2.new(0, pillW*3+12, 0, 52),
-        BackgroundTransparency=1, ZIndex=14 })
-    New("UIListLayout", { Parent=PillRow,
-        FillDirection=Enum.FillDirection.Horizontal,
-        HorizontalAlignment=Enum.HorizontalAlignment.Left,
-        VerticalAlignment=Enum.VerticalAlignment.Center,
-        Padding=UDim.new(0,6) })
+    local PILL_H = 62
+    local PillRow = New("Frame", {
+        Parent               = CI,
+        Position             = UDim2.new(0, 0, 0, 272),
+        Size                 = UDim2.new(0, pillW*3+12, 0, PILL_H),
+        BackgroundTransparency = 1,
+        ZIndex               = 14,
+    })
+    New("UIListLayout", {
+        Parent              = PillRow,
+        FillDirection       = Enum.FillDirection.Horizontal,
+        HorizontalAlignment = Enum.HorizontalAlignment.Left,
+        VerticalAlignment   = Enum.VerticalAlignment.Center,
+        Padding             = UDim.new(0, 6),
+    })
 
     for _, pd in ipairs(pillDefs) do
-        local pill = New("Frame", { Parent=PillRow,
-            Size=UDim2.new(0,pillW,0,52),
-            BackgroundColor3=T.Tone, ZIndex=14 })
-        Corner(pill, 7)
+        local pill = New("Frame", {
+            Parent           = PillRow,
+            Size             = UDim2.new(0, pillW, 0, PILL_H),
+            BackgroundColor3 = T.Tone,
+            ZIndex           = 14,
+        })
+        Corner(pill, 8)
         Stroke(pill, T.Border, 1)
 
-        -- Top row: icon + heading side by side at y=10
-        New("ImageLabel", {
-            Parent=pill,
-            Position=UDim2.new(0,10,0,10),
-            Size=UDim2.new(0,14,0,14),
-            BackgroundTransparency=1,
-            Image=pd.icon, ImageColor3=T.Highlight, ZIndex=15,
+        -- Coloured left accent bar
+        local bar = New("Frame", {
+            Parent           = pill,
+            Position         = UDim2.new(0, 0, 0.5, -18),
+            Size             = UDim2.new(0, 3, 0, 36),
+            BackgroundColor3 = pd.color,
+            ZIndex           = 15,
         })
-        New("TextLabel", {
-            Parent=pill,
-            Position=UDim2.new(0,28,0,10),
-            Size=UDim2.new(1,-32,0,14),
-            BackgroundTransparency=1, Text=pd.head,
-            TextColor3=T.Highlight, FontFace=FONT_BOLD, TextSize=11,
-            TextXAlignment=Enum.TextXAlignment.Left, ZIndex=15,
+        Corner(bar, 2)
+
+        -- Icon badge (rounded square, translucent tinted bg)
+        local iconBg = New("Frame", {
+            Parent               = pill,
+            Position             = UDim2.new(0, 14, 0.5, -14),
+            Size                 = UDim2.new(0, 28, 0, 28),
+            BackgroundColor3     = pd.color,
+            BackgroundTransparency = 0.80,
+            ZIndex               = 15,
+        })
+        Corner(iconBg, 7)
+
+        New("ImageLabel", {
+            Parent               = iconBg,
+            AnchorPoint          = Vector2.new(0.5, 0.5),
+            Position             = UDim2.new(0.5, 0, 0.5, 0),
+            Size                 = UDim2.new(0, 16, 0, 16),
+            BackgroundTransparency = 1,
+            Image                = pd.icon,
+            ImageColor3          = pd.color,
+            ZIndex               = 16,
         })
 
-        -- Bottom row: subtext at y=28
+        -- Heading
         New("TextLabel", {
-            Parent=pill,
-            Position=UDim2.new(0,10,0,28),
-            Size=UDim2.new(1,-14,0,14),
-            BackgroundTransparency=1, Text=pd.sub,
-            TextColor3=T.Subtext, FontFace=FONT, TextSize=10,
-            TextXAlignment=Enum.TextXAlignment.Left,
-            TextTruncate=Enum.TextTruncate.AtEnd, ZIndex=15,
+            Parent               = pill,
+            Position             = UDim2.new(0, 50, 0, 13),
+            Size                 = UDim2.new(1, -56, 0, 16),
+            BackgroundTransparency = 1,
+            Text                 = pd.head,
+            TextColor3           = pd.color,
+            FontFace             = FONT_BOLD,
+            TextSize             = 12,
+            TextXAlignment       = Enum.TextXAlignment.Left,
+            ZIndex               = 15,
+        })
+
+        -- Subtext
+        New("TextLabel", {
+            Parent               = pill,
+            Position             = UDim2.new(0, 50, 0, 33),
+            Size                 = UDim2.new(1, -56, 0, 14),
+            BackgroundTransparency = 1,
+            Text                 = pd.sub,
+            TextColor3           = T.Subtext,
+            FontFace             = FONT,
+            TextSize             = 10,
+            TextXAlignment       = Enum.TextXAlignment.Left,
+            TextTruncate         = Enum.TextTruncate.AtEnd,
+            ZIndex               = 15,
         })
     end
 
-    -- Status bar
-    local StatusBar = New("Frame", { Parent=Card, AnchorPoint=Vector2.new(0,1),
-        Position=UDim2.new(0,0,1,0), Size=UDim2.new(1,0,0,2),
-        BackgroundColor3=T.Border, ZIndex=15 })
-    Corner(StatusBar, 2)
-    local StatusFill = New("Frame", { Parent=StatusBar, Size=UDim2.new(0,0,1,0),
-        BackgroundColor3=T.Highlight, ZIndex=16 })
-    Corner(StatusFill, 2)
+    -- Status bar removed
 
     -- ════════════════════════════════════════════════════════════════
     -- PAGE 2 — SUPPORTED GAMES  (single clean list)
@@ -620,22 +669,18 @@ function KeyUI:Prompt(OPTIONS)
         if state == "idle" then
             VerifyLabel.Text="Verify Key  →"; VerifyLabel.TextColor3=T.Title; HintLabel.Text=""
             TW(VerifyBtn,EI,{BackgroundColor3=T.Highlight})
-            TW(StatusFill,EI2,{Size=UDim2.new(0,0,1,0),BackgroundColor3=T.Highlight})
         elseif state == "loading" then
             TW(VerifyBtn,EI,{BackgroundColor3=T.Hover})
         elseif state == "success" then
             VerifyLabel.Text="Verified  ✓"; VerifyLabel.TextColor3=T.Background; HintLabel.Text=""
             TW(VerifyBtn,EI,{BackgroundColor3=T.Success})
             TW(VerifyFill,TweenInfo.new(.5,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{Size=UDim2.new(1,0,1,0)})
-            TW(StatusFill,EI3,{Size=UDim2.new(1,0,1,0),BackgroundColor3=T.Success})
         elseif state == "fail" then
             VerifyLabel.Text="Try Again"; VerifyLabel.TextColor3=T.Title
             HintLabel.Text="Key not recognised — please check and retry."
             TW(VerifyBtn,EI,{BackgroundColor3=T.Highlight})
             TW(InputStroke,EI,{Color=T.Error})
-            TW(StatusFill,EI2,{Size=UDim2.new(0,0,1,0),BackgroundColor3=T.Error})
-            task.delay(.9,function()
-                TW(InputStroke,EI,{Color=T.Border}); TW(StatusFill,EI,{BackgroundColor3=T.Highlight}) end)
+            task.delay(.9,function() TW(InputStroke,EI,{Color=T.Border}) end)
         end
     end
     SetStatus("idle")
