@@ -344,7 +344,7 @@ function KeyUI:Prompt(OPTIONS)
         },
     }
 
-    local PILL_H = 62
+    local PILL_H = 72
     local PillRow = New("Frame", {
         Parent               = CI,
         Position             = UDim2.new(0, 0, 0, 272),
