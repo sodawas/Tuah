@@ -714,12 +714,27 @@ local pillDefs = {
 
             stop=true; processing=false
             if ok then
-                saveKey(key); SetStatus("success")
-                task.wait(1.4)
-                TW(Win,TweenInfo.new(.4,Enum.EasingStyle.Quad,Enum.EasingDirection.In),{Position=UDim2.new(.5,0,.5,-40)})
-                TW(Win,TweenInfo.new(.35),{BackgroundTransparency=1})
-                task.wait(.42); SG:Destroy(); task.spawn(onSuccess,key)
-            else SetStatus("fail") end
+    getgenv().SCRIPT_KEY = key -- <-- Das verlangt Junkie
+
+    saveKey(key)
+    SetStatus("success")
+
+    task.wait(1.4)
+
+    TW(Win,TweenInfo.new(.4,Enum.EasingStyle.Quad,Enum.EasingDirection.In),{
+        Position = UDim2.new(.5,0,.5,-40)
+    })
+    TW(Win,TweenInfo.new(.35),{
+        BackgroundTransparency = 1
+    })
+
+    task.wait(.42)
+    SG:Destroy()
+
+    task.spawn(onSuccess, key)
+else
+    SetStatus("fail")
+end
         end)
     end
 
@@ -736,13 +751,29 @@ local pillDefs = {
         if s and r then
             if type(r)=="boolean" then valid=r
             elseif type(r)=="table" then valid=r.valid==true or r.message=="KEY_VALID" or r.message=="KEYLESS" end end
-        if valid then
-            InputBox.Text=saved; processing=true; SetStatus("success")
-            task.wait(1.4)
-            TW(Win,TweenInfo.new(.4,Enum.EasingStyle.Quad,Enum.EasingDirection.In),{Position=UDim2.new(.5,0,.5,-40)})
-            TW(Win,TweenInfo.new(.35),{BackgroundTransparency=1})
-            task.wait(.42); SG:Destroy(); task.spawn(onSuccess,saved)
-        else clearKey() end
+       if valid then
+    getgenv().SCRIPT_KEY = saved -- <-- ebenfalls notwendig
+
+    InputBox.Text = saved
+    processing = true
+    SetStatus("success")
+
+    task.wait(1.4)
+
+    TW(Win,TweenInfo.new(.4,Enum.EasingStyle.Quad,Enum.EasingDirection.In),{
+        Position = UDim2.new(.5,0,.5,-40)
+    })
+    TW(Win,TweenInfo.new(.35),{
+        BackgroundTransparency = 1
+    })
+
+    task.wait(.42)
+    SG:Destroy()
+
+    task.spawn(onSuccess, saved)
+else
+    clearKey()
+end
     end)
 
     local function Close()
