@@ -552,7 +552,9 @@ function KeyUI:Prompt(OPTIONS)
         {icon=ICONS.support,  label="Support",    value=appSupp,                        col=T.Highlight},
         {icon=ICONS.tag,      label="Key Mode",   value=fsOk and "Auto saved" or "Session only", col=T.Highlight},
     }
-    local CARD_H=60, CARD_GAP=8, CARD_COLS=2
+    local CARD_H    = 60
+    local CARD_GAP  = 8
+    local CARD_COLS = 2
     local CARD_W = math.floor((CONT_W - 40 - (CARD_COLS-1)*CARD_GAP) / CARD_COLS)
 
     for i, cd in ipairs(cardDefs) do
