@@ -1,24 +1,3 @@
--- KeyUI.lua (v11)
---
--- USAGE — restructure your main script like this:
---
---   local KeyUI = loadstring(game:HttpGet("...Key_Library"))()
---   KeyUI:Prompt({
---       Title = "Buried", ...,
---       Callback = function(key)
---           -- Junkie is loaded HERE, after the key is confirmed
---           local Junkie = loadstring(game:HttpGet("https://jnkie.com/sdk/library.lua"))()
---           Junkie.service    = "Buried"
---           Junkie.identifier = "1100894"
---           Junkie.provider   = "Buried"
---           getgenv().SCRIPT_KEY = key
---           -- rest of your script...
---       end,
---   })
---
--- The key is validated via Junkie.check_key BEFORE Junkie.service is set,
--- so Junkie's background loop never starts until SCRIPT_KEY is already valid.
-
 local KeyUI = {}
 
 local Players          = game:GetService("Players")
@@ -91,7 +70,6 @@ end
 local function TW(i, ti, pr) TweenService:Create(i, ti, pr):Play() end
 local EI = TweenInfo.new(.15, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut)
 
--- ── Filesystem ────────────────────────────────────────────────────────────
 local fsOk = (type(writefile) == "function" and type(readfile) == "function")
 local function saveKey(k)
     if not fsOk then return end
@@ -116,13 +94,8 @@ local function getGame()
     return ok and n or tostring(game.PlaceId)
 end
 
--- ── Validate key directly via HTTP (no Junkie.service needed) ─────────────
--- This calls the Junkie REST API the same way check_key does internally,
--- but without starting Junkie's background loop.
-local function validateKeyHTTP(junkie, key)
-    -- If Junkie exposes check_key we use it directly.
-    -- At this point Junkie.service/identifier are NOT set yet,
-    -- so the background loop hasn't started.
+-- fallback idk
+function validateKeyHTTP(junkie, key)
     if junkie and junkie.check_key then
         local ok, r = pcall(function() return junkie.check_key(key) end)
         if not ok or not r then return false end
@@ -134,11 +107,9 @@ local function validateKeyHTTP(junkie, key)
         end
         return false
     end
-    -- Fallback: no Junkie provided, accept any non-empty key
     return key ~= nil and key ~= ""
 end
 
--- ══════════════════════════════════════════════════════════════════════════
 function KeyUI:Prompt(OPTIONS)
     OPTIONS     = OPTIONS or {}
     local onSuccess = OPTIONS.Callback or function() end
@@ -147,7 +118,6 @@ function KeyUI:Prompt(OPTIONS)
     local keyLink   = OPTIONS.KeyLink  or "https://jnkie.com/get-key/buried"
     local appVer    = OPTIONS.Version  or "1.2.0"
     local appSupp   = OPTIONS.Support  or "discord.gg/buried"
-    -- Junkie instance passed in — we use check_key only, never set .service
     local Junkie    = OPTIONS.Junkie
     local allGames  = OPTIONS.Games    or { "Slime RNG" }
     local keyGames  = OPTIONS.KeyGames or allGames
@@ -157,18 +127,14 @@ function KeyUI:Prompt(OPTIONS)
     for _, g in ipairs(allGames) do
         if not keySet[g] then table.insert(freeGames, g) end
     end
-
-    -- ── ScreenGui ─────────────────────────────────────────────────────────
     local SG = New("ScreenGui", {
-        Name="LotusKeyUI",
+        Name="buried_key_sys_socool_",
         Parent=(pcall(function() return CoreGui end) and CoreGui) or PGui,
         ZIndexBehavior=Enum.ZIndexBehavior.Global,
         ResetOnSpawn=false, IgnoreGuiInset=true,
     })
     New("Frame", {Parent=SG, Size=UDim2.new(1,0,1,0),
         BackgroundColor3=RGB(0,0,0), BackgroundTransparency=.52, ZIndex=1})
-
-    -- ── Window ────────────────────────────────────────────────────────────
     local WIN_W, WIN_H, SIDE_W = 720, 490, 120
     local CR = 12
 
@@ -183,8 +149,6 @@ function KeyUI:Prompt(OPTIONS)
     Stroke(Win, T.Border, 1)
     TW(Win, TweenInfo.new(.45, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
         {Position=UDim2.new(.5,0,.5,0)})
-
-    -- ── Sidebar ───────────────────────────────────────────────────────────
     local Sidebar = New("Frame", {
         Parent=Win, Size=UDim2.new(0,SIDE_W,1,0),
         BackgroundColor3=T.Sidebar, ZIndex=11,
@@ -210,8 +174,6 @@ function KeyUI:Prompt(OPTIONS)
         Position=UDim2.new(.5,0,0,74), Size=UDim2.new(.55,0,0,1),
         BackgroundColor3=T.Border, ZIndex=12,
     })
-
-    -- ── Content ───────────────────────────────────────────────────────────
     local CONT_W = WIN_W - SIDE_W - 1
     local ContentArea = New("Frame", {
         Parent=Win, AnchorPoint=Vector2.new(1,0),
@@ -253,10 +215,6 @@ function KeyUI:Prompt(OPTIONS)
             BackgroundTransparency=1, ZIndex=12, Visible=false,
         })
     end
-
-    -- ════════════════════════════════════════════════════════════════
-    -- PAGE 1 — KEY
-    -- ════════════════════════════════════════════════════════════════
     local VerifyPage = MakePage()
     VerifyPage.Visible = true
 
@@ -392,7 +350,6 @@ function KeyUI:Prompt(OPTIONS)
         TextColor3=T.Subtext, FontFace=FONT, TextSize=12,
         TextXAlignment=Enum.TextXAlignment.Left, ZIndex=14,
     })
-
     local pillAvail = CONT_W - 84
     local pillW     = math.floor((pillAvail - 12) / 3)
     local pillDefs  = {
@@ -427,10 +384,6 @@ function KeyUI:Prompt(OPTIONS)
         New("TextLabel", {Parent=pill, Position=UDim2.new(0,52,0,13), Size=UDim2.new(1,-58,0,17), BackgroundTransparency=1, Text=pd.head, TextColor3=pd.color, FontFace=FONT_BOLD, TextSize=13, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=15})
         New("TextLabel", {Parent=pill, Position=UDim2.new(0,52,0,34), Size=UDim2.new(1,-60,0,58), BackgroundTransparency=1, Text=pd.sub, TextColor3=T.Subtext, FontFace=FONT, TextSize=11, TextWrapped=true, TextTruncate=Enum.TextTruncate.None, TextXAlignment=Enum.TextXAlignment.Left, TextYAlignment=Enum.TextYAlignment.Top, ZIndex=15})
     end
-
-    -- ════════════════════════════════════════════════════════════════
-    -- PAGE 2 — GAMES
-    -- ════════════════════════════════════════════════════════════════
     local GamesPage = MakePage()
     Pad(GamesPage, 20,20,18,18)
 
@@ -445,11 +398,9 @@ function KeyUI:Prompt(OPTIONS)
     local GameScroll = New("ScrollingFrame", {Parent=GamesPage, Position=UDim2.new(0,0,0,42), Size=UDim2.new(1,0,1,-42), BackgroundTransparency=1, ScrollBarThickness=2, ZIndex=13, CanvasSize=UDim2.new(0,0,0,0), AutomaticCanvasSize=Enum.AutomaticSize.Y})
     New("UIListLayout", {Parent=GameScroll, Padding=UDim.new(0,6), SortOrder=Enum.SortOrder.LayoutOrder})
     New("UIPadding", {Parent=GameScroll, PaddingTop=UDim.new(0,6)})
-
     local combined = {}
     for _, g in ipairs(keyGames)  do table.insert(combined, {name=g, free=false}) end
     for _, g in ipairs(freeGames) do table.insert(combined, {name=g, free=true})  end
-
     for idx, entry in ipairs(combined) do
         local row = New("Frame", {Parent=GameScroll, Size=UDim2.new(1,0,0,38), BackgroundColor3=T.Tone, ZIndex=14})
         Corner(row,8); Stroke(row,T.Border,1)
@@ -465,10 +416,6 @@ function KeyUI:Prompt(OPTIONS)
         clk.MouseEnter:Connect(function() TW(row,EI,{BackgroundColor3=T.Accent}) end)
         clk.MouseLeave:Connect(function() TW(row,EI,{BackgroundColor3=T.Tone})   end)
     end
-
-    -- ════════════════════════════════════════════════════════════════
-    -- PAGE 3 — INFO
-    -- ════════════════════════════════════════════════════════════════
     local InfoPage = MakePage()
     Pad(InfoPage, 20,20,18,18)
 
@@ -499,10 +446,6 @@ function KeyUI:Prompt(OPTIONS)
         New("TextLabel", {Parent=c, Position=UDim2.new(0,54,0,10), Size=UDim2.new(1,-60,0,14), BackgroundTransparency=1, Text=cd.label, TextColor3=T.Subtext, FontFace=FONT_BOLD, TextSize=10, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=14})
         New("TextLabel", {Parent=c, Position=UDim2.new(0,54,0,26), Size=UDim2.new(1,-60,0,20), BackgroundTransparency=1, Text=cd.value, TextColor3=T.Title, FontFace=FONT_SB, TextSize=13, TextTruncate=Enum.TextTruncate.AtEnd, TextXAlignment=Enum.TextXAlignment.Left, ZIndex=14})
     end
-
-    -- ════════════════════════════════════════════════════════════════
-    -- SIDEBAR TABS
-    -- ════════════════════════════════════════════════════════════════
     local TAB_DEFS = {
         {id="verify", img=ICONS.key,  label="Key"},
         {id="games",  img=ICONS.grid, label="Games"},
@@ -527,9 +470,7 @@ function KeyUI:Prompt(OPTIONS)
 
     for _, td in ipairs(TAB_DEFS) do
         local yPos = 90 + (_ - 1) * 66
-        -- recalculate using index
     end
-    -- redo with proper index
     for idx2, td in ipairs(TAB_DEFS) do
         local yPos = 90 + (idx2-1)*66
         local isOn = (td.id == activeTab)
@@ -548,10 +489,6 @@ function KeyUI:Prompt(OPTIONS)
         clk2.MouseLeave:Connect(function()
             if activeTab ~= td.id then TW(bg,EI,{BackgroundTransparency=1}); TW(img2,EI,{ImageColor3=T.Subtext}); TW(lbl2,EI,{TextColor3=T.Subtext}) end end)
     end
-
-    -- ════════════════════════════════════════════════════════════════
-    -- STATE
-    -- ════════════════════════════════════════════════════════════════
     local processing = false
 
     local function SetStatus(state)
@@ -582,10 +519,6 @@ function KeyUI:Prompt(OPTIONS)
         if SG and SG.Parent then SG:Destroy() end
         if cb then task.spawn(cb) end
     end
-
-    -- ════════════════════════════════════════════════════════════════
-    -- KEY CHECK  — uses Junkie.check_key only, never touches .service
-    -- ════════════════════════════════════════════════════════════════
     local function RawCheck(key)
         if not Junkie or not Junkie.check_key then
             task.wait(.2); return (key ~= nil and key ~= "")
@@ -600,10 +533,6 @@ function KeyUI:Prompt(OPTIONS)
         end
         return false
     end
-
-    -- ════════════════════════════════════════════════════════════════
-    -- SUBMIT
-    -- ════════════════════════════════════════════════════════════════
     local function Submit()
         if processing then return end
         local key = InputBox.Text:gsub("%s+","")
@@ -615,7 +544,6 @@ function KeyUI:Prompt(OPTIONS)
         end
         processing = true
         SetStatus("loading"); HintLabel.Text=""
-
         local dots, stop = 0, false
         task.spawn(function()
             while not stop do
@@ -639,18 +567,13 @@ function KeyUI:Prompt(OPTIONS)
             end
         end)
     end
-
     VerifyClick.MouseButton1Up:Connect(Submit)
     UserInputService.InputBegan:Connect(function(inp, proc)
         if proc then return end
         if inp.KeyCode==Enum.KeyCode.Return or inp.KeyCode==Enum.KeyCode.KeypadEnter then Submit() end
     end)
-
-    -- ════════════════════════════════════════════════════════════════
-    -- AUTO-CHECK SAVED KEY
-    -- ════════════════════════════════════════════════════════════════
     task.spawn(function()
-        task.wait()  -- let UI render first
+        task.wait()
         local saved = loadKey()
         if not saved then return end
 
@@ -670,10 +593,6 @@ function KeyUI:Prompt(OPTIONS)
             clearKey()
         end
     end)
-
-    -- ════════════════════════════════════════════════════════════════
-    -- CLOSE
-    -- ════════════════════════════════════════════════════════════════
     CloseBtn.MouseButton1Up:Connect(function() AnimateClose(onFail) end)
 
     return SG
