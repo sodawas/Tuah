@@ -361,10 +361,10 @@ function KeyUI:Prompt(OPTIONS)
     local pillW     = math.floor((pillAvail - 12) / 3)
     local pillDefs  = {
         { icon="rbxassetid://126051928248434", head="Security",
-          sub="Your key is linked to your account to reduce abuse and keep "..appTitle.." safe!",
+          sub="Your key is linked to your account to reduce abuse and keep "..appTitle.." safe",
           color=RGB(120,190,255) },
         { icon="rbxassetid://104125730756067", head="Fast Updates",
-          sub="Receive every new feature, performance improvement, and bug fix!",
+          sub="Receive every new feature, performance improvement, and bug fixes",
           color=RGB(255,190,70) },
         { icon="rbxassetid://134041181497506", head=appTitle.."+",
           sub="Skip the key system and gain access to exclusive perks only for "..appTitle.."+ members",
