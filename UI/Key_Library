@@ -1,12 +1,4 @@
--- KeyUI.lua (v8)
--- Usage:
---   local Junkie = loadstring(game:HttpGet("https://jnkie.com/sdk/library.lua"))()
---   Junkie.service = "Lotus" ; Junkie.identifier = "1100894" ; Junkie.provider = "Buried"
---   local KeyUI = loadstring(...)()
---   KeyUI:Prompt({ Junkie=Junkie, Title="Buried", Games={...}, KeyGames={...},
---                  KeyLink="https://...", Version="1.0.0", Support="discord.gg/lotus",
---                  Callback=function(key) end, OnFail=function() end })
-
+-- KeyUI.lua (v9 – fixed corners, brighter visuals, auth timing)
 local KeyUI = {}
 
 local Players          = game:GetService("Players")
@@ -24,16 +16,16 @@ local T = {
     Sidebar     = RGB(11,  11,  17),
     Tone        = RGB(20,  19,  28),
     Accent      = RGB(26,  25,  38),
-    Highlight   = RGB(121, 115, 234),
-    Hover       = RGB(90,  86,  170),
-    Selected    = RGB(100, 96,  190),
-    Text        = RGB(195, 195, 200),
-    Subtext     = RGB(78,  76,  98),
+    Highlight   = RGB(140, 133, 255),   -- brighter purple
+    Hover       = RGB(110, 104, 200),
+    Selected    = RGB(120, 114, 210),
+    Text        = RGB(225, 225, 232),   -- much brighter
+    Subtext     = RGB(160, 158, 185),   -- brighter subtext
     Title       = RGB(255, 255, 255),
-    Success     = RGB(72,  190, 130),
-    Error       = RGB(210, 65,  65),
-    Border      = RGB(28,  27,  42),
-    Card        = RGB(13,  13,  19),
+    Success     = RGB(80,  210, 145),
+    Error       = RGB(220, 75,  75),
+    Border      = RGB(38,  37,  55),
+    Card        = RGB(15,  14,  22),
     TagBg       = RGB(22,  21,  32),
 }
 
@@ -49,7 +41,7 @@ local ICONS = {
     bolt     = "rbxassetid://127960731548043",
     star     = "rbxassetid://127960731548043",
     grid     = "rbxassetid://6026568247",
-    info     = "rbxassetid://109729627927575",   -- changed: document/list icon
+    info     = "rbxassetid://109729627927575",
     check    = "rbxassetid://6031094678",
     lock     = "rbxassetid://6023426915",
     close    = "rbxassetid://80084831701712",
@@ -68,40 +60,53 @@ local function New(class, props)
     pcall(function() i.BorderSizePixel = 0 end)
     return i
 end
-local function Corner(p, r) New("UICorner", { Parent=p, CornerRadius=UDim.new(0,r or 6) }) end
+local function Corner(p, r)
+    New("UICorner", { Parent=p, CornerRadius=UDim.new(0, r or 6) })
+end
 local function Stroke(p, col, thick)
-    return New("UIStroke", { Parent=p, Color=col or T.Border, Thickness=thick or 1,
-        LineJoinMode=Enum.LineJoinMode.Round, ApplyStrokeMode=Enum.ApplyStrokeMode.Border })
+    return New("UIStroke", {
+        Parent=p, Color=col or T.Border, Thickness=thick or 1,
+        LineJoinMode=Enum.LineJoinMode.Round,
+        ApplyStrokeMode=Enum.ApplyStrokeMode.Border
+    })
 end
 local function Pad(p, l, r, t, b)
-    New("UIPadding", { Parent=p, PaddingLeft=UDim.new(0,l), PaddingRight=UDim.new(0,r),
-        PaddingTop=UDim.new(0,t), PaddingBottom=UDim.new(0,b) })
+    New("UIPadding", {
+        Parent=p,
+        PaddingLeft=UDim.new(0,l), PaddingRight=UDim.new(0,r),
+        PaddingTop=UDim.new(0,t),  PaddingBottom=UDim.new(0,b)
+    })
 end
 local function TW(i, ti, pr) TweenService:Create(i, ti, pr):Play() end
 local EI  = TweenInfo.new(.15, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut)
 local EI2 = TweenInfo.new(.30, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut)
 local EI3 = TweenInfo.new(.50, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
+-- ── File system helpers ───────────────────────────────────────────────────
 local function hasFS()
     return pcall(function() return type(writefile) == "function" end)
         and pcall(function() return type(readfile)  == "function" end)
 end
 local fsOk = hasFS()
 local function saveKey(k)  if not fsOk then return end; pcall(function() writefile("_jnk.txt",k) end) end
-local function loadKey()   if not fsOk then return nil end; local ok,v=pcall(function() return readfile("_jnk.txt") end); return (ok and v and v ~= "") and v or nil end
-local function clearKey()  if not fsOk then return end; pcall(function() delfile("_jnk.txt") end) end
+local function loadKey()
+    if not fsOk then return nil end
+    local ok,v = pcall(function() return readfile("_jnk.txt") end)
+    return (ok and v and v ~= "") and v or nil
+end
+local function clearKey() if not fsOk then return end; pcall(function() delfile("_jnk.txt") end) end
 
 local function getExecutor()
     if identifyexecutor then return identifyexecutor() end
     return "Unknown"
 end
-
 local function getTime()
     return os.date and os.date("%I:%M %p") or "N/A"
 end
-
 local function getGame()
-    local ok, name = pcall(function() return game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name end)
+    local ok, name = pcall(function()
+        return game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name
+    end)
     return ok and name or tostring(game.PlaceId)
 end
 
@@ -115,7 +120,7 @@ function KeyUI:Prompt(OPTIONS)
     local appVer    = OPTIONS.Version   or "1.2.0"
     local appSupp   = OPTIONS.Support   or "discord.gg/buried"
     local Junkie    = OPTIONS.Junkie
-    local allGames  = OPTIONS.Games     or { "Grow a Garden", "Murder Mystery 2", "Blox Fruits", "Slime RNG" }
+    local allGames  = OPTIONS.Games     or { "Slime RNG" }
     local keyGames  = OPTIONS.KeyGames  or allGames
 
     local freeGames, keySet = {}, {}
@@ -124,80 +129,160 @@ function KeyUI:Prompt(OPTIONS)
         if not keySet[g] then table.insert(freeGames, g) end
     end
 
+    -- ── Root ScreenGui ────────────────────────────────────────────────────
     local SG = New("ScreenGui", {
-        Name="LotusKeyUI",
-        Parent=(pcall(function() return CoreGui end) and CoreGui) or PGui,
-        ZIndexBehavior=Enum.ZIndexBehavior.Global,
-        ResetOnSpawn=false, IgnoreGuiInset=true,
+        Name          = "LotusKeyUI",
+        Parent        = (pcall(function() return CoreGui end) and CoreGui) or PGui,
+        ZIndexBehavior = Enum.ZIndexBehavior.Global,
+        ResetOnSpawn  = false,
+        IgnoreGuiInset = true,
     })
 
-    New("Frame", { Parent=SG, Size=UDim2.new(1,0,1,0),
-        BackgroundColor3=RGB(0,0,0), BackgroundTransparency=.52, ZIndex=1 })
+    -- Dim backdrop
+    New("Frame", {
+        Parent = SG, Size = UDim2.new(1,0,1,0),
+        BackgroundColor3 = RGB(0,0,0),
+        BackgroundTransparency = .52, ZIndex = 1
+    })
 
-    -- ── Window — bigger ────────────────────────────────────────────────────
+    -- ── Window ────────────────────────────────────────────────────────────
     local WIN_W  = 720
     local WIN_H  = 490
     local SIDE_W = 120
+    local CORNER = 12   -- global corner radius
 
     local Win = New("Frame", {
-        Parent=SG, AnchorPoint=Vector2.new(.5,.5),
-        Position=UDim2.new(.5,0,.5,30),
-        Size=UDim2.new(0,WIN_W,0,WIN_H),
-        BackgroundColor3=T.Background, ZIndex=10, ClipsDescendants=true,
+        Parent = SG,
+        AnchorPoint = Vector2.new(.5,.5),
+        Position    = UDim2.new(.5,0,.5,30),
+        Size        = UDim2.new(0,WIN_W,0,WIN_H),
+        BackgroundColor3 = T.Background,
+        ZIndex = 10,
+        ClipsDescendants = true,
     })
-    Corner(Win, 10)
+    Corner(Win, CORNER)
     Stroke(Win, T.Border, 1)
     TW(Win, TweenInfo.new(.45, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-        { Position=UDim2.new(.5,0,.5,0) })
+        { Position = UDim2.new(.5,0,.5,0) })
 
-    -- ── Sidebar ────────────────────────────────────────────────────────────
+    -- ── Sidebar ───────────────────────────────────────────────────────────
     local Sidebar = New("Frame", {
-        Parent=Win, Size=UDim2.new(0,SIDE_W,1,0),
-        BackgroundColor3=T.Sidebar, ZIndex=11,
+        Parent = Win,
+        Size   = UDim2.new(0,SIDE_W,1,0),
+        BackgroundColor3 = T.Sidebar,
+        ZIndex = 11,
     })
-    New("Frame", { Parent=Win, Position=UDim2.new(0,SIDE_W,0,0),
-        Size=UDim2.new(0,1,1,0), BackgroundColor3=T.Border, ZIndex=12 })
+    -- rounded only on left side – clip on right via window ClipsDescendants
+    Corner(Sidebar, CORNER)
+    -- fill right half of sidebar so only left corners show
+    New("Frame", {
+        Parent = Sidebar,
+        Position = UDim2.new(.5,0,0,0),
+        Size = UDim2.new(.5,0,1,0),
+        BackgroundColor3 = T.Sidebar,
+        ZIndex = 11,
+    })
+    -- 1-px divider line
+    New("Frame", {
+        Parent = Win,
+        Position = UDim2.new(0,SIDE_W,0,0),
+        Size = UDim2.new(0,1,1,0),
+        BackgroundColor3 = T.Border,
+        ZIndex = 12,
+    })
 
-    New("ImageLabel", { Parent=Sidebar, AnchorPoint=Vector2.new(.5,0),
-        Position=UDim2.new(.5,0,0,18), Size=UDim2.new(0,46,0,46),
-        BackgroundTransparency=1, Image=LOTUS, ImageColor3=T.Title, ZIndex=12 })
-    New("Frame", { Parent=Sidebar, AnchorPoint=Vector2.new(.5,0),
-        Position=UDim2.new(.5,0,0,72), Size=UDim2.new(.55,0,0,1),
-        BackgroundColor3=T.Border, ZIndex=12 })
+    -- Logo
+    New("ImageLabel", {
+        Parent = Sidebar,
+        AnchorPoint = Vector2.new(.5,0),
+        Position    = UDim2.new(.5,0,0,18),
+        Size        = UDim2.new(0,48,0,48),
+        BackgroundTransparency = 1,
+        Image       = LOTUS,
+        ImageColor3 = T.Title,
+        ZIndex      = 12,
+    })
+    -- thin divider under logo
+    New("Frame", {
+        Parent = Sidebar,
+        AnchorPoint = Vector2.new(.5,0),
+        Position = UDim2.new(.5,0,0,74),
+        Size = UDim2.new(.55,0,0,1),
+        BackgroundColor3 = T.Border,
+        ZIndex = 12,
+    })
 
-    -- ── Content ────────────────────────────────────────────────────────────
+    -- ── Content area ──────────────────────────────────────────────────────
     local CONT_W = WIN_W - SIDE_W - 1
     local ContentArea = New("Frame", {
-        Parent=Win, AnchorPoint=Vector2.new(1,0),
-        Position=UDim2.new(1,0,0,0), Size=UDim2.new(0,CONT_W,1,0),
-        BackgroundTransparency=1, ZIndex=11,
+        Parent = Win,
+        AnchorPoint = Vector2.new(1,0),
+        Position = UDim2.new(1,0,0,0),
+        Size     = UDim2.new(0,CONT_W,1,0),
+        BackgroundTransparency = 1,
+        ZIndex   = 11,
     })
 
-    local TopBar = New("Frame", { Parent=ContentArea,
-        Size=UDim2.new(1,0,0,46),
-        BackgroundColor3=T.Background, ZIndex=12 })
-    New("Frame", { Parent=TopBar, AnchorPoint=Vector2.new(0,1),
-        Position=UDim2.new(0,0,1,0), Size=UDim2.new(1,0,0,1),
-        BackgroundColor3=T.Border, ZIndex=13 })
-    New("TextLabel", { Parent=TopBar, AnchorPoint=Vector2.new(.5,.5),
-        Position=UDim2.new(.5,0,.5,0), Size=UDim2.new(.7,0,1,0),
-        BackgroundTransparency=1, Text=appTitle,
-        TextColor3=T.Title, FontFace=FONT_BOLD, TextSize=14, ZIndex=13 })
+    -- Top bar
+    local TopBar = New("Frame", {
+        Parent = ContentArea,
+        Size   = UDim2.new(1,0,0,46),
+        BackgroundColor3 = T.Background,
+        ZIndex = 12,
+    })
+    -- top-right corner only – the window already clips
+    New("Frame", {
+        Parent = TopBar,
+        AnchorPoint = Vector2.new(0,1),
+        Position = UDim2.new(0,0,1,0),
+        Size     = UDim2.new(1,0,0,1),
+        BackgroundColor3 = T.Border,
+        ZIndex = 13,
+    })
+    New("TextLabel", {
+        Parent = TopBar,
+        AnchorPoint = Vector2.new(.5,.5),
+        Position = UDim2.new(.5,0,.5,0),
+        Size = UDim2.new(.7,0,1,0),
+        BackgroundTransparency = 1,
+        Text = appTitle,
+        TextColor3 = T.Title,
+        FontFace   = FONT_BOLD,
+        TextSize   = 15,   -- slightly bigger title
+        ZIndex     = 13,
+    })
 
-    local CloseBtn = New("ImageButton", { Parent=TopBar,
-        AnchorPoint=Vector2.new(1,.5), Position=UDim2.new(1,-16,.5,0),
-        Size=UDim2.new(0,13,0,13), BackgroundTransparency=1,
-        Image=ICONS.close, ImageColor3=T.Subtext, ZIndex=14 })
+    local CloseBtn = New("ImageButton", {
+        Parent      = TopBar,
+        AnchorPoint = Vector2.new(1,.5),
+        Position    = UDim2.new(1,-16,.5,0),
+        Size        = UDim2.new(0,14,0,14),
+        BackgroundTransparency = 1,
+        Image       = ICONS.close,
+        ImageColor3 = T.Subtext,
+        ZIndex      = 14,
+    })
     CloseBtn.MouseEnter:Connect(function() TW(CloseBtn,EI,{ImageColor3=T.Error}) end)
     CloseBtn.MouseLeave:Connect(function() TW(CloseBtn,EI,{ImageColor3=T.Subtext}) end)
 
-    local PageContainer = New("Frame", { Parent=ContentArea,
-        Position=UDim2.new(0,0,0,46), Size=UDim2.new(1,0,1,-46),
-        BackgroundTransparency=1, ZIndex=11, ClipsDescendants=true })
+    -- Page container
+    local PageContainer = New("Frame", {
+        Parent = ContentArea,
+        Position = UDim2.new(0,0,0,46),
+        Size     = UDim2.new(1,0,1,-46),
+        BackgroundTransparency = 1,
+        ZIndex   = 11,
+        ClipsDescendants = true,
+    })
 
     local function MakePage()
-        return New("Frame", { Parent=PageContainer, Size=UDim2.new(1,0,1,0),
-            BackgroundTransparency=1, ZIndex=12, Visible=false })
+        return New("Frame", {
+            Parent = PageContainer,
+            Size   = UDim2.new(1,0,1,0),
+            BackgroundTransparency = 1,
+            ZIndex  = 12,
+            Visible = false,
+        })
     end
 
     -- ════════════════════════════════════════════════════════════════
@@ -206,84 +291,176 @@ function KeyUI:Prompt(OPTIONS)
     local VerifyPage = MakePage()
     VerifyPage.Visible = true
 
-    local VPad = New("Frame", { Parent=VerifyPage, Size=UDim2.new(1,0,1,0),
-        BackgroundTransparency=1, ZIndex=12 })
+    local VPad = New("Frame", {
+        Parent = VerifyPage,
+        Size   = UDim2.new(1,0,1,0),
+        BackgroundTransparency = 1,
+        ZIndex = 12,
+    })
     Pad(VPad, 20,20,18,18)
 
-    local Card = New("Frame", { Parent=VPad, Size=UDim2.new(1,0,1,0),
-        BackgroundColor3=T.Card, ZIndex=13 })
-    Corner(Card, 8)
+    local Card = New("Frame", {
+        Parent = VPad,
+        Size   = UDim2.new(1,0,1,0),
+        BackgroundColor3 = T.Card,
+        ZIndex = 13,
+    })
+    Corner(Card, 10)
     Stroke(Card, T.Border, 1)
 
-    local CI = New("Frame", { Parent=Card, Size=UDim2.new(1,0,1,0),
-        BackgroundTransparency=1, ZIndex=13 })
+    local CI = New("Frame", {
+        Parent = Card,
+        Size   = UDim2.new(1,0,1,0),
+        BackgroundTransparency = 1,
+        ZIndex = 13,
+    })
     Pad(CI, 22,22,20,20)
 
-    New("TextLabel", { Parent=CI, Size=UDim2.new(1,0,0,26),
-        BackgroundTransparency=1, Text="Key System",
-        TextColor3=T.Title, FontFace=FONT_BOLD, TextSize=20,
-        TextXAlignment=Enum.TextXAlignment.Left, ZIndex=14 })
-    New("TextLabel", { Parent=CI, Position=UDim2.new(0,0,0,30),
-        Size=UDim2.new(1,0,0,17), BackgroundTransparency=1,
-        Text="Enter the key you received to unlock " .. appTitle .. "",
-        TextColor3=T.Subtext, FontFace=FONT, TextSize=12,
-        TextXAlignment=Enum.TextXAlignment.Left, ZIndex=14 })
+    New("TextLabel", {
+        Parent = CI,
+        Size   = UDim2.new(1,0,0,28),
+        BackgroundTransparency = 1,
+        Text   = "Key System",
+        TextColor3 = T.Title,
+        FontFace   = FONT_BOLD,
+        TextSize   = 22,        -- bigger heading
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 14,
+    })
+    New("TextLabel", {
+        Parent   = CI,
+        Position = UDim2.new(0,0,0,32),
+        Size     = UDim2.new(1,0,0,18),
+        BackgroundTransparency = 1,
+        Text     = "Enter the key you received to unlock " .. appTitle,
+        TextColor3 = T.Subtext,
+        FontFace   = FONT,
+        TextSize   = 13,        -- slightly bigger
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex   = 14,
+    })
 
-    -- Input
-    local InputBack = New("Frame", { Parent=CI, Position=UDim2.new(0,0,0,62),
-        Size=UDim2.new(1,0,0,40), BackgroundColor3=T.Tone,
-        ZIndex=14, ClipsDescendants=true })
-    Corner(InputBack, 6)
+    -- Input field
+    local InputBack = New("Frame", {
+        Parent   = CI,
+        Position = UDim2.new(0,0,0,66),
+        Size     = UDim2.new(1,0,0,42),
+        BackgroundColor3 = T.Tone,
+        ZIndex   = 14,
+        ClipsDescendants = true,
+    })
+    Corner(InputBack, 8)
     local InputStroke = Stroke(InputBack, T.Border, 1)
-    New("ImageLabel", { Parent=InputBack, AnchorPoint=Vector2.new(0,.5),
-        Position=UDim2.new(0,12,.5,0), Size=UDim2.new(0,13,0,13),
-        BackgroundTransparency=1, Image=ICONS.lock, ImageColor3=T.Subtext, ZIndex=15 })
-    local InputBox = New("TextBox", { Parent=InputBack,
-        Position=UDim2.new(0,33,0,0), Size=UDim2.new(1,-35,1,0),
-        BackgroundTransparency=1, Text="",
-        PlaceholderText="buried-XXXX-XXXX-XXXX-XXX",
-        PlaceholderColor3=T.Subtext, TextColor3=T.Text,
-        FontFace=FONT, TextSize=13,
-        TextXAlignment=Enum.TextXAlignment.Left,
-        TextTruncate=Enum.TextTruncate.AtEnd,
-        ClearTextOnFocus=false, ZIndex=15 })
+    New("ImageLabel", {
+        Parent      = InputBack,
+        AnchorPoint = Vector2.new(0,.5),
+        Position    = UDim2.new(0,13,.5,0),
+        Size        = UDim2.new(0,16,0,16),    -- bigger icon
+        BackgroundTransparency = 1,
+        Image       = ICONS.lock,
+        ImageColor3 = T.Subtext,
+        ZIndex      = 15,
+    })
+    local InputBox = New("TextBox", {
+        Parent   = InputBack,
+        Position = UDim2.new(0,36,0,0),
+        Size     = UDim2.new(1,-38,1,0),
+        BackgroundTransparency = 1,
+        Text     = "",
+        PlaceholderText  = "buried-XXXX-XXXX-XXXX-XXX",
+        PlaceholderColor3 = T.Subtext,
+        TextColor3 = T.Text,
+        FontFace   = FONT,
+        TextSize   = 14,        -- bigger input text
+        TextXAlignment  = Enum.TextXAlignment.Left,
+        TextTruncate    = Enum.TextTruncate.AtEnd,
+        ClearTextOnFocus = false,
+        ZIndex   = 15,
+    })
     InputBox.Focused:Connect(function()
-        TW(InputStroke,EI,{Color=T.Hover}); TW(InputBack,EI,{BackgroundColor3=RGB(22,21,34)}) end)
+        TW(InputStroke, EI, {Color=T.Highlight})
+        TW(InputBack,   EI, {BackgroundColor3=RGB(22,21,34)})
+    end)
     InputBox.FocusLost:Connect(function()
-        TW(InputStroke,EI,{Color=T.Border}); TW(InputBack,EI,{BackgroundColor3=T.Tone}) end)
+        TW(InputStroke, EI, {Color=T.Border})
+        TW(InputBack,   EI, {BackgroundColor3=T.Tone})
+    end)
 
-    local HintLabel = New("TextLabel", { Parent=CI, Position=UDim2.new(0,0,0,106),
-        Size=UDim2.new(1,0,0,13), BackgroundTransparency=1, Text="",
-        TextColor3=T.Error, FontFace=FONT, TextSize=10,
-        TextXAlignment=Enum.TextXAlignment.Left, ZIndex=14 })
+    local HintLabel = New("TextLabel", {
+        Parent   = CI,
+        Position = UDim2.new(0,0,0,112),
+        Size     = UDim2.new(1,0,0,14),
+        BackgroundTransparency = 1,
+        Text     = "",
+        TextColor3 = T.Error,
+        FontFace   = FONT,
+        TextSize   = 11,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex   = 14,
+    })
 
     -- Verify button
-    local VerifyBtn = New("Frame", { Parent=CI, Position=UDim2.new(0,0,0,124),
-        Size=UDim2.new(1,0,0,40), BackgroundColor3=T.Highlight,
-        ZIndex=14, ClipsDescendants=true })
-    Corner(VerifyBtn, 6)
-    local VerifyFill = New("Frame", { Parent=VerifyBtn, Size=UDim2.new(0,0,1,0),
-        BackgroundColor3=T.Success, ZIndex=14 })
-    Corner(VerifyFill, 6)
-    local VerifyLabel = New("TextLabel", { Parent=VerifyBtn, Size=UDim2.new(1,0,1,0),
-        BackgroundTransparency=1, Text="Verify Key  →",
-        TextColor3=T.Title, FontFace=FONT_BOLD, TextSize=14, ZIndex=15 })
-    local VerifyClick = New("TextButton", { Parent=VerifyBtn, Size=UDim2.new(1,0,1,0),
-        BackgroundTransparency=1, Text="", ZIndex=16 })
-    VerifyClick.MouseEnter:Connect(function() TW(VerifyBtn,EI,{BackgroundColor3=T.Selected}) end)
-    VerifyClick.MouseLeave:Connect(function() TW(VerifyBtn,EI,{BackgroundColor3=T.Highlight}) end)
+    local VerifyBtn = New("Frame", {
+        Parent   = CI,
+        Position = UDim2.new(0,0,0,130),
+        Size     = UDim2.new(1,0,0,42),
+        BackgroundColor3 = T.Highlight,
+        ZIndex   = 14,
+        ClipsDescendants = true,
+    })
+    Corner(VerifyBtn, 8)
+    local VerifyFill = New("Frame", {
+        Parent = VerifyBtn,
+        Size   = UDim2.new(0,0,1,0),
+        BackgroundColor3 = T.Success,
+        ZIndex = 14,
+    })
+    Corner(VerifyFill, 8)
+    local VerifyLabel = New("TextLabel", {
+        Parent = VerifyBtn,
+        Size   = UDim2.new(1,0,1,0),
+        BackgroundTransparency = 1,
+        Text   = "Verify Key  →",
+        TextColor3 = T.Title,
+        FontFace   = FONT_BOLD,
+        TextSize   = 15,        -- bigger button text
+        ZIndex     = 15,
+    })
+    local VerifyClick = New("TextButton", {
+        Parent = VerifyBtn,
+        Size   = UDim2.new(1,0,1,0),
+        BackgroundTransparency = 1,
+        Text   = "",
+        ZIndex = 16,
+    })
+    VerifyClick.MouseEnter:Connect(function()    TW(VerifyBtn,EI,{BackgroundColor3=T.Selected}) end)
+    VerifyClick.MouseLeave:Connect(function()    TW(VerifyBtn,EI,{BackgroundColor3=T.Highlight}) end)
     VerifyClick.MouseButton1Down:Connect(function() TW(VerifyBtn,EI,{BackgroundColor3=T.Hover}) end)
 
-    -- Copy key link
-    local CopyBtn = New("Frame", { Parent=CI, Position=UDim2.new(0,0,0,172),
-        Size=UDim2.new(1,0,0,36), BackgroundColor3=T.Background, ZIndex=14 })
-    Corner(CopyBtn, 6)
+    -- Copy key link button
+    local CopyBtn = New("Frame", {
+        Parent   = CI,
+        Position = UDim2.new(0,0,0,182),
+        Size     = UDim2.new(1,0,0,38),
+        BackgroundColor3 = T.Background,
+        ZIndex   = 14,
+    })
+    Corner(CopyBtn, 8)
     local CopyStroke = Stroke(CopyBtn, T.Border, 1)
-    local CopyLabel = New("TextLabel", { Parent=CopyBtn, Size=UDim2.new(1,0,1,0),
-        BackgroundTransparency=1, Text="Copy key link",
-        TextColor3=T.Text, FontFace=FONT_SB, TextSize=13, ZIndex=15 })
-    local CopyClick = New("TextButton", { Parent=CopyBtn, Size=UDim2.new(1,0,1,0),
-        BackgroundTransparency=1, Text="", ZIndex=16 })
+    local CopyLabel  = New("TextLabel", {
+        Parent = CopyBtn,
+        Size   = UDim2.new(1,0,1,0),
+        BackgroundTransparency = 1,
+        Text   = "Copy key link",
+        TextColor3 = T.Text,
+        FontFace   = FONT_SB,
+        TextSize   = 14,
+        ZIndex     = 15,
+    })
+    local CopyClick = New("TextButton", {
+        Parent = CopyBtn, Size = UDim2.new(1,0,1,0),
+        BackgroundTransparency = 1, Text = "", ZIndex = 16,
+    })
     CopyClick.MouseEnter:Connect(function()
         TW(CopyBtn,EI,{BackgroundColor3=T.Tone}); TW(CopyStroke,EI,{Color=T.Hover}) end)
     CopyClick.MouseLeave:Connect(function()
@@ -291,307 +468,368 @@ function KeyUI:Prompt(OPTIONS)
     CopyClick.MouseButton1Up:Connect(function()
         local link = keyLink
         if Junkie and Junkie.get_key_link then
-            local ok,r = pcall(function() return Junkie.get_key_link() end)
+            local ok, r = pcall(function() return Junkie.get_key_link() end)
             if ok and r then link = r end
         end
         pcall(function() setclipboard(link) end)
         local orig = CopyLabel.Text
-        CopyLabel.Text="Copied!"; CopyLabel.TextColor3=T.Highlight
+        CopyLabel.Text = "Copied!"; CopyLabel.TextColor3 = T.Highlight
         task.delay(1.5, function()
             if CopyLabel and CopyLabel.Parent then
-                CopyLabel.Text=orig; CopyLabel.TextColor3=T.Text end end)
+                CopyLabel.Text = orig; CopyLabel.TextColor3 = T.Text
+            end
+        end)
     end)
 
-    -- Why a key?
-    New("Frame", { Parent=CI, Position=UDim2.new(0,0,0,220),
-        Size=UDim2.new(1,0,0,1), BackgroundColor3=T.Border, ZIndex=14 })
-    New("TextLabel", { Parent=CI, Position=UDim2.new(0,0,0,230),
-        Size=UDim2.new(1,0,0,17), BackgroundTransparency=1, Text="Why a key?",
-        TextColor3=T.Title, FontFace=FONT_BOLD, TextSize=13,
-        TextXAlignment=Enum.TextXAlignment.Left, ZIndex=14 })
-    New("TextLabel", { Parent=CI, Position=UDim2.new(0,0,0,252),
-        Size=UDim2.new(1,0,0,14), BackgroundTransparency=1,
-        Text="Keys help us keep " .. appTitle .. " secure, stable and always up to date.",
-        TextColor3=T.Subtext, FontFace=FONT, TextSize=11,
-        TextXAlignment=Enum.TextXAlignment.Left, ZIndex=14 })
+    -- Why a key section
+    New("Frame", {
+        Parent = CI, Position = UDim2.new(0,0,0,232),
+        Size = UDim2.new(1,0,0,1), BackgroundColor3 = T.Border, ZIndex = 14,
+    })
+    New("TextLabel", {
+        Parent = CI, Position = UDim2.new(0,0,0,242),
+        Size = UDim2.new(1,0,0,18), BackgroundTransparency = 1,
+        Text = "Why a key?", TextColor3 = T.Title,
+        FontFace = FONT_BOLD, TextSize = 14,     -- bigger
+        TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 14,
+    })
+    New("TextLabel", {
+        Parent = CI, Position = UDim2.new(0,0,0,264),
+        Size = UDim2.new(1,0,0,15), BackgroundTransparency = 1,
+        Text = "Keys help us keep " .. appTitle .. " secure, stable and always up to date.",
+        TextColor3 = T.Subtext, FontFace = FONT, TextSize = 12,
+        TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 14,
+    })
 
-    -- Pills — pixel-exact width so they never overflow
-    -- Available inner width = CONT_W − 2×(VPad 20) − 2×(CI pad 22) = CONT_W − 84
+    -- Benefit pills
     local pillAvail = CONT_W - 84
-    local pillW     = math.floor((pillAvail - 12) / 3)  -- 12 = 2 gaps of 6
+    local pillW     = math.floor((pillAvail - 12) / 3)
 
-local pillDefs = {
-    {
-        icon  = "rbxassetid://126051928248434",
-        head  = "Secure Protection",
-        sub   = "Your key is securely linked to your account to reduce abuse and keep Buried safe for everyone",
-        color = RGB(100,180,255),
-    },
-    {
-        icon  = "rbxassetid://104125730756067",
-        head  = "Fast Updates",
-        sub   = "Receive every new feature, performance improvement, and bug fixes!",
-        color = RGB(255,180,60),
-    },
-    {
-        icon  = "rbxassetid://134041181497506",
-        head  = appTitle .. "+",
-        sub   = "Skip the key system and gain access to exclusive perks available only to Buried+ members",
-        color = RGB(121,115,234),
-    },
-}
+    local pillDefs = {
+        {
+            icon  = "rbxassetid://126051928248434",
+            head  = "Secure Protection",
+            sub   = "Your key is securely linked to your account to reduce abuse and keep Buried safe for everyone",
+            color = RGB(120,190,255),
+        },
+        {
+            icon  = "rbxassetid://104125730756067",
+            head  = "Fast Updates",
+            sub   = "Receive every new feature, performance improvement, and bug fix!",
+            color = RGB(255,190,70),
+        },
+        {
+            icon  = "rbxassetid://134041181497506",
+            head  = appTitle .. "+",
+            sub   = "Skip the key system and gain access to exclusive perks available only to Buried+ members",
+            color = RGB(140,133,255),
+        },
+    }
 
-    local PILL_H = 105
-
+    local PILL_H  = 108
     local PillRow = New("Frame", {
-        Parent               = CI,
-        Position = UDim2.new(0, 0, 0, 278),
-        Size                 = UDim2.new(0, pillW*3+12, 0, PILL_H),
+        Parent   = CI,
+        Position = UDim2.new(0,0,0,288),
+        Size     = UDim2.new(0, pillW*3+12, 0, PILL_H),
         BackgroundTransparency = 1,
-        ZIndex               = 14,
+        ZIndex   = 14,
     })
     New("UIListLayout", {
-        Parent              = PillRow,
+        Parent = PillRow,
         FillDirection       = Enum.FillDirection.Horizontal,
         HorizontalAlignment = Enum.HorizontalAlignment.Left,
         VerticalAlignment   = Enum.VerticalAlignment.Center,
-        Padding             = UDim.new(0, 6),
+        Padding             = UDim.new(0,6),
     })
 
     for _, pd in ipairs(pillDefs) do
         local pill = New("Frame", {
-            Parent           = PillRow,
-            Size             = UDim2.new(0, pillW, 0, PILL_H),
+            Parent = PillRow,
+            Size   = UDim2.new(0,pillW,0,PILL_H),
             BackgroundColor3 = T.Card,
-            ZIndex           = 14,
+            ZIndex = 14,
         })
-        Corner(pill, 8)
+        Corner(pill, 10)
         Stroke(pill, T.Border, 1)
 
-        -- Icon badge (rounded square, translucent tinted bg)
         local iconBg = New("Frame", {
-            Parent               = pill,
-            Position = UDim2.new(0,14,0,12),
-            Size                 = UDim2.new(0, 28, 0, 28),
-            BackgroundColor3     = pd.color,
-            BackgroundTransparency = 0.80,
-            ZIndex               = 15,
+            Parent = pill,
+            Position = UDim2.new(0,14,0,13),
+            Size     = UDim2.new(0,30,0,30),
+            BackgroundColor3 = pd.color,
+            BackgroundTransparency = 0.78,
+            ZIndex = 15,
         })
-        Corner(iconBg, 7)
-
+        Corner(iconBg, 8)
         New("ImageLabel", {
-            Parent               = iconBg,
-            AnchorPoint          = Vector2.new(0.5, 0.5),
-            Position             = UDim2.new(0.5, 0, 0.5, 0),
-            Size                 = UDim2.new(0, 16, 0, 16),
+            Parent      = iconBg,
+            AnchorPoint = Vector2.new(.5,.5),
+            Position    = UDim2.new(.5,0,.5,0),
+            Size        = UDim2.new(0,17,0,17),
             BackgroundTransparency = 1,
-            Image                = pd.icon,
-            ImageColor3          = pd.color,
-            ZIndex               = 16,
+            Image       = pd.icon,
+            ImageColor3 = pd.color,
+            ZIndex      = 16,
         })
 
-        -- Heading
         New("TextLabel", {
-            Parent               = pill,
-            Position = UDim2.new(0,50,0,12),
-            Size                 = UDim2.new(1, -56, 0, 16),
+            Parent = pill,
+            Position = UDim2.new(0,52,0,13),
+            Size     = UDim2.new(1,-58,0,17),
             BackgroundTransparency = 1,
-            Text                 = pd.head,
-            TextColor3           = pd.color,
-            FontFace             = FONT_BOLD,
-            TextSize             = 12,
-            TextXAlignment       = Enum.TextXAlignment.Left,
-            ZIndex               = 15,
+            Text   = pd.head,
+            TextColor3 = pd.color,
+            FontFace   = FONT_BOLD,
+            TextSize   = 13,    -- bigger pill heading
+            TextXAlignment = Enum.TextXAlignment.Left,
+            ZIndex = 15,
         })
-
-        -- Subtext
-                New("TextLabel", {
-                    Parent = pill,
-                    Position = UDim2.new(0,50,0,33),
-                    Size = UDim2.new(1,-60,0,52),
-                    BackgroundTransparency = 1,
-
-                    Text = pd.sub,
-                    TextColor3 = T.Subtext,
-
-                    FontFace = FONT,
-                    TextSize = 10,
-
-                    TextWrapped = true,
-                    TextTruncate = Enum.TextTruncate.None,
-
-                    TextXAlignment = Enum.TextXAlignment.Left,
-                    TextYAlignment = Enum.TextYAlignment.Top,
-
-                    ZIndex = 15,
-                })
+        New("TextLabel", {
+            Parent = pill,
+            Position = UDim2.new(0,52,0,34),
+            Size     = UDim2.new(1,-60,0,55),
+            BackgroundTransparency = 1,
+            Text   = pd.sub,
+            TextColor3 = T.Subtext,
+            FontFace   = FONT,
+            TextSize   = 11,    -- bigger pill body
+            TextWrapped = true,
+            TextTruncate = Enum.TextTruncate.None,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextYAlignment = Enum.TextYAlignment.Top,
+            ZIndex = 15,
+        })
     end
 
-    -- Status bar removed
-
     -- ════════════════════════════════════════════════════════════════
-    -- PAGE 2 — SUPPORTED GAMES  (single clean list)
+    -- PAGE 2 — SUPPORTED GAMES
     -- ════════════════════════════════════════════════════════════════
     local GamesPage = MakePage()
     Pad(GamesPage, 20,20,18,18)
 
-    -- Section header
-    local SecHeader = New("Frame", { Parent=GamesPage,
-        Size=UDim2.new(1,0,0,32), BackgroundColor3=T.Tone, ZIndex=13 })
-    Corner(SecHeader, 7)
+    local SecHeader = New("Frame", {
+        Parent = GamesPage,
+        Size   = UDim2.new(1,0,0,34),
+        BackgroundColor3 = T.Tone,
+        ZIndex = 13,
+    })
+    Corner(SecHeader, 8)
     Stroke(SecHeader, T.Border, 1)
-    New("ImageLabel", { Parent=SecHeader, AnchorPoint=Vector2.new(0,.5),
-        Position=UDim2.new(0,12,.5,0), Size=UDim2.new(0,14,0,14),
-        BackgroundTransparency=1, Image=ICONS.grid, ImageColor3=T.Highlight, ZIndex=14 })
-    New("TextLabel", { Parent=SecHeader, Position=UDim2.new(0,32,0,0),
-        Size=UDim2.new(.6,0,1,0), BackgroundTransparency=1,
-        Text="Supported Games", TextColor3=T.Title,
-        FontFace=FONT_BOLD, TextSize=12,
-        TextXAlignment=Enum.TextXAlignment.Left, ZIndex=14 })
-    -- game count badge
-    local CountBadge = New("Frame", { Parent=SecHeader,
-        AnchorPoint=Vector2.new(1,.5), Position=UDim2.new(1,-10,.5,0),
-        Size=UDim2.new(0,28,0,18), BackgroundColor3=T.Accent, ZIndex=14 })
+    New("ImageLabel", {
+        Parent      = SecHeader,
+        AnchorPoint = Vector2.new(0,.5),
+        Position    = UDim2.new(0,13,.5,0),
+        Size        = UDim2.new(0,16,0,16),
+        BackgroundTransparency = 1,
+        Image       = ICONS.grid,
+        ImageColor3 = T.Highlight,
+        ZIndex      = 14,
+    })
+    New("TextLabel", {
+        Parent   = SecHeader,
+        Position = UDim2.new(0,35,0,0),
+        Size     = UDim2.new(.6,0,1,0),
+        BackgroundTransparency = 1,
+        Text     = "Supported Games",
+        TextColor3 = T.Title,
+        FontFace   = FONT_BOLD,
+        TextSize   = 13,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex   = 14,
+    })
+    local CountBadge = New("Frame", {
+        Parent      = SecHeader,
+        AnchorPoint = Vector2.new(1,.5),
+        Position    = UDim2.new(1,-10,.5,0),
+        Size        = UDim2.new(0,28,0,18),
+        BackgroundColor3 = T.Accent,
+        ZIndex = 14,
+    })
     Corner(CountBadge, 9)
-    New("TextLabel", { Parent=CountBadge, Size=UDim2.new(1,0,1,0),
-        BackgroundTransparency=1, Text=tostring(#allGames),
-        TextColor3=T.Highlight, FontFace=FONT_BOLD, TextSize=11, ZIndex=15 })
+    New("TextLabel", {
+        Parent = CountBadge, Size = UDim2.new(1,0,1,0),
+        BackgroundTransparency = 1,
+        Text = tostring(#allGames),
+        TextColor3 = T.Highlight, FontFace = FONT_BOLD, TextSize = 12, ZIndex = 15,
+    })
 
-    -- Scrollable game list
-    local GameScroll = New("ScrollingFrame", { Parent=GamesPage,
-        Position=UDim2.new(0,0,0,40),
-        Size=UDim2.new(1,0,1,-40),
-        BackgroundTransparency=1, ScrollBarThickness=2, ZIndex=13,
-        CanvasSize=UDim2.new(0,0,0,0), AutomaticCanvasSize=Enum.AutomaticSize.Y })
-    New("UIListLayout", { Parent=GameScroll, Padding=UDim.new(0,6),
-        SortOrder=Enum.SortOrder.LayoutOrder })
+    local GameScroll = New("ScrollingFrame", {
+        Parent   = GamesPage,
+        Position = UDim2.new(0,0,0,42),
+        Size     = UDim2.new(1,0,1,-42),
+        BackgroundTransparency = 1,
+        ScrollBarThickness = 2,
+        ZIndex = 13,
+        CanvasSize = UDim2.new(0,0,0,0),
+        AutomaticCanvasSize = Enum.AutomaticSize.Y,
+    })
+    New("UIListLayout", {
+        Parent = GameScroll, Padding = UDim.new(0,6),
+        SortOrder = Enum.SortOrder.LayoutOrder,
+    })
     New("UIPadding", { Parent=GameScroll, PaddingTop=UDim.new(0,6) })
 
-    -- Build combined list: key-required games first, then free
     local combined = {}
-    for _, g in ipairs(keyGames)  do table.insert(combined, { name=g, free=false }) end
-    for _, g in ipairs(freeGames) do table.insert(combined, { name=g, free=true  }) end
+    for _, g in ipairs(keyGames)  do table.insert(combined, {name=g, free=false}) end
+    for _, g in ipairs(freeGames) do table.insert(combined, {name=g, free=true})  end
 
     for idx, entry in ipairs(combined) do
-        local row = New("Frame", { Parent=GameScroll,
-            Size=UDim2.new(1,0,0,36), BackgroundColor3=T.Tone, ZIndex=14 })
-        Corner(row, 6)
+        local row = New("Frame", {
+            Parent = GameScroll,
+            Size   = UDim2.new(1,0,0,38),
+            BackgroundColor3 = T.Tone,
+            ZIndex = 14,
+        })
+        Corner(row, 8)
         Stroke(row, T.Border, 1)
 
-        -- index number
-        New("TextLabel", { Parent=row, Position=UDim2.new(0,12,0,0),
-            Size=UDim2.new(0,22,1,0), BackgroundTransparency=1,
-            Text=string.format("%02d", idx), TextColor3=T.Subtext,
-            FontFace=FONT_BOLD, TextSize=10,
-            TextXAlignment=Enum.TextXAlignment.Left, ZIndex=15 })
+        New("TextLabel", {
+            Parent = row, Position = UDim2.new(0,13,0,0),
+            Size = UDim2.new(0,24,1,0), BackgroundTransparency = 1,
+            Text = string.format("%02d", idx), TextColor3 = T.Subtext,
+            FontFace = FONT_BOLD, TextSize = 11,
+            TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 15,
+        })
+        New("TextLabel", {
+            Parent = row, Position = UDim2.new(0,40,0,0),
+            Size = UDim2.new(.6,0,1,0), BackgroundTransparency = 1,
+            Text = entry.name, TextColor3 = T.Text,
+            FontFace = FONT_SB, TextSize = 13,
+            TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 15,
+        })
 
-        -- game name
-        New("TextLabel", { Parent=row, Position=UDim2.new(0,38,0,0),
-            Size=UDim2.new(.6,0,1,0), BackgroundTransparency=1,
-            Text=entry.name, TextColor3=T.Text,
-            FontFace=FONT_SB, TextSize=12,
-            TextXAlignment=Enum.TextXAlignment.Left, ZIndex=15 })
-
-        -- status tag  (Key Required  /  Free)
         local tagColor = entry.free and T.Success or T.Highlight
         local tagText  = entry.free and "Free" or "Key Required"
-        local tag = New("Frame", { Parent=row, AnchorPoint=Vector2.new(1,.5),
-            Position=UDim2.new(1,-12,.5,0),
-            Size=UDim2.new(0, entry.free and 44 or 90, 0,20),
-            BackgroundColor3=T.Accent, ZIndex=15 })
+        local tag = New("Frame", {
+            Parent      = row,
+            AnchorPoint = Vector2.new(1,.5),
+            Position    = UDim2.new(1,-13,.5,0),
+            Size        = UDim2.new(0, entry.free and 46 or 92, 0,20),
+            BackgroundColor3 = T.Accent, ZIndex = 15,
+        })
         Corner(tag, 10)
-        New("UIStroke", { Parent=tag, Color=tagColor, Thickness=1,
-            Transparency=.55, ApplyStrokeMode=Enum.ApplyStrokeMode.Border })
-        New("TextLabel", { Parent=tag, Size=UDim2.new(1,0,1,0),
-            BackgroundTransparency=1, Text=tagText,
-            TextColor3=tagColor, FontFace=FONT_BOLD, TextSize=10, ZIndex=16 })
+        New("UIStroke", {
+            Parent = tag, Color = tagColor, Thickness = 1,
+            Transparency = .5,
+            ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+        })
+        New("TextLabel", {
+            Parent = tag, Size = UDim2.new(1,0,1,0),
+            BackgroundTransparency = 1,
+            Text = tagText, TextColor3 = tagColor,
+            FontFace = FONT_BOLD, TextSize = 11, ZIndex = 16,
+        })
 
-        -- hover
-        local click = New("TextButton", { Parent=row, Size=UDim2.new(1,0,1,0),
-            BackgroundTransparency=1, Text="", ZIndex=17 })
-        click.MouseEnter:Connect(function() TW(row,EI,{BackgroundColor3=T.Accent}) end)
-        click.MouseLeave:Connect(function() TW(row,EI,{BackgroundColor3=T.Tone}) end)
+        local click = New("TextButton", {
+            Parent = row, Size = UDim2.new(1,0,1,0),
+            BackgroundTransparency = 1, Text = "", ZIndex = 17,
+        })
+        click.MouseEnter:Connect(function()  TW(row,EI,{BackgroundColor3=T.Accent}) end)
+        click.MouseLeave:Connect(function()  TW(row,EI,{BackgroundColor3=T.Tone})   end)
     end
 
     -- ════════════════════════════════════════════════════════════════
-    -- PAGE 3 — INFO  (live stats + useful info)
+    -- PAGE 3 — INFO
     -- ════════════════════════════════════════════════════════════════
     local InfoPage = MakePage()
     Pad(InfoPage, 20,20,18,18)
 
-    -- Section title
-    New("TextLabel", { Parent=InfoPage, Size=UDim2.new(1,0,0,20),
-        BackgroundTransparency=1,
-        Text=appTitle .. "  ·  Overview",
-        TextColor3=T.Title, FontFace=FONT_BOLD, TextSize=14,
-        TextXAlignment=Enum.TextXAlignment.Left, ZIndex=13 })
+    New("TextLabel", {
+        Parent = InfoPage, Size = UDim2.new(1,0,0,22),
+        BackgroundTransparency = 1,
+        Text = appTitle .. "  ·  Overview",
+        TextColor3 = T.Title, FontFace = FONT_BOLD, TextSize = 15,
+        TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 13,
+    })
+    New("Frame", {
+        Parent = InfoPage, Position = UDim2.new(0,0,0,28),
+        Size = UDim2.new(1,0,0,1), BackgroundColor3 = T.Border, ZIndex = 13,
+    })
 
-    New("Frame", { Parent=InfoPage, Position=UDim2.new(0,0,0,26),
-        Size=UDim2.new(1,0,0,1), BackgroundColor3=T.Border, ZIndex=13 })
-
-    -- Info card grid: 2 columns of cards
     local cardDefs = {
-        { icon=ICONS.version,  label="Version",    value=appVer,                   col=T.Highlight },
-        { icon=ICONS.game,     label="Game",        value=getGame(),                col=T.Highlight },
-        { icon=ICONS.executor, label="Executor",    value=getExecutor(),            col=T.Highlight },
-        { icon=ICONS.clock,    label="Launched",    value=getTime(),                col=T.Highlight },
-        { icon=ICONS.support,  label="Support",     value=appSupp,                  col=T.Highlight },
-        { icon=ICONS.tag,      label="Key Mode", value=fsOk and "Auto saved" or "Session only", col=T.Highlight },
+        { icon=ICONS.version,  label="Version",   value=appVer,      col=T.Highlight },
+        { icon=ICONS.game,     label="Game",       value=getGame(),   col=T.Highlight },
+        { icon=ICONS.executor, label="Executor",   value=getExecutor(), col=T.Highlight },
+        { icon=ICONS.clock,    label="Launched",   value=getTime(),   col=T.Highlight },
+        { icon=ICONS.support,  label="Support",    value=appSupp,     col=T.Highlight },
+        { icon=ICONS.tag,      label="Key Mode",   value=fsOk and "Auto saved" or "Session only", col=T.Highlight },
     }
 
-    local CARD_H    = 58
+    local CARD_H    = 60
     local CARD_GAP  = 8
     local CARD_COLS = 2
     local CARD_W    = math.floor((CONT_W - 40 - (CARD_COLS-1)*CARD_GAP) / CARD_COLS)
 
     for i, cd in ipairs(cardDefs) do
-        local col = (i-1) % CARD_COLS
-        local row = math.floor((i-1) / CARD_COLS)
-        local xOff = col * (CARD_W + CARD_GAP)
-        local yOff = 34 + row * (CARD_H + CARD_GAP)
+        local col  = (i-1) % CARD_COLS
+        local row2 = math.floor((i-1) / CARD_COLS)
+        local xOff = col  * (CARD_W + CARD_GAP)
+        local yOff = 36 + row2 * (CARD_H + CARD_GAP)
 
-        local c = New("Frame", { Parent=InfoPage,
-            Position=UDim2.new(0,xOff,0,yOff),
-            Size=UDim2.new(0,CARD_W,0,CARD_H),
-            BackgroundColor3=T.Tone, ZIndex=13 })
-        Corner(c, 7)
+        local c = New("Frame", {
+            Parent   = InfoPage,
+            Position = UDim2.new(0,xOff,0,yOff),
+            Size     = UDim2.new(0,CARD_W,0,CARD_H),
+            BackgroundColor3 = T.Tone,
+            ZIndex   = 13,
+        })
+        Corner(c, 9)
         Stroke(c, T.Border, 1)
 
-        -- icon circle bg
-        local iconBg = New("Frame", { Parent=c,
-            Position=UDim2.new(0,12,0,12),
-            Size=UDim2.new(0,32,0,32),
-            BackgroundColor3=T.Accent, ZIndex=14 })
+        local iconBg = New("Frame", {
+            Parent   = c,
+            Position = UDim2.new(0,13,0,13),
+            Size     = UDim2.new(0,32,0,32),
+            BackgroundColor3 = T.Accent,
+            ZIndex   = 14,
+        })
         Corner(iconBg, 16)
-        New("ImageLabel", { Parent=iconBg, AnchorPoint=Vector2.new(.5,.5),
-            Position=UDim2.new(.5,0,.5,0), Size=UDim2.new(0,16,0,16),
-            BackgroundTransparency=1, Image=cd.icon, ImageColor3=cd.col, ZIndex=15 })
+        New("ImageLabel", {
+            Parent      = iconBg,
+            AnchorPoint = Vector2.new(.5,.5),
+            Position    = UDim2.new(.5,0,.5,0),
+            Size        = UDim2.new(0,17,0,17),
+            BackgroundTransparency = 1,
+            Image       = cd.icon,
+            ImageColor3 = cd.col,
+            ZIndex      = 15,
+        })
 
-        -- label + value
-        New("TextLabel", { Parent=c,
-            Position=UDim2.new(0,52,0,10),
-            Size=UDim2.new(1,-58,0,14),
-            BackgroundTransparency=1, Text=cd.label,
-            TextColor3=T.Subtext, FontFace=FONT_BOLD, TextSize=9,
-            TextXAlignment=Enum.TextXAlignment.Left, ZIndex=14 })
-        New("TextLabel", { Parent=c,
-            Position=UDim2.new(0,52,0,26),
-            Size=UDim2.new(1,-58,0,18),
-            BackgroundTransparency=1, Text=cd.value,
-            TextColor3=T.Title, FontFace=FONT_SB, TextSize=12,
-            TextXAlignment=Enum.TextXAlignment.Left,
-            TextTruncate=Enum.TextTruncate.AtEnd, ZIndex=14 })
+        New("TextLabel", {
+            Parent   = c,
+            Position = UDim2.new(0,54,0,10),
+            Size     = UDim2.new(1,-60,0,14),
+            BackgroundTransparency = 1,
+            Text     = cd.label,
+            TextColor3 = T.Subtext,
+            FontFace   = FONT_BOLD,
+            TextSize   = 10,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            ZIndex   = 14,
+        })
+        New("TextLabel", {
+            Parent   = c,
+            Position = UDim2.new(0,54,0,26),
+            Size     = UDim2.new(1,-60,0,20),
+            BackgroundTransparency = 1,
+            Text     = cd.value,
+            TextColor3 = T.Title,
+            FontFace   = FONT_SB,
+            TextSize   = 13,
+            TextXAlignment  = Enum.TextXAlignment.Left,
+            TextTruncate    = Enum.TextTruncate.AtEnd,
+            ZIndex   = 14,
+        })
     end
 
     -- ════════════════════════════════════════════════════════════════
-    -- SIDEBAR TAB BUTTONS
+    -- SIDEBAR TABS
     -- ════════════════════════════════════════════════════════════════
     local TAB_DEFS = {
-        { id="verify", img=ICONS.key,  label="Key" },
+        { id="verify", img=ICONS.key,  label="Key"   },
         { id="games",  img=ICONS.grid, label="Games" },
-        { id="info",   img=ICONS.info, label="Info" },
+        { id="info",   img=ICONS.info, label="Info"  },
     }
-
     local pages     = { verify=VerifyPage, games=GamesPage, info=InfoPage }
     local activeTab = "verify"
     local tabBtns   = {}
@@ -617,42 +855,71 @@ local pillDefs = {
         local yPos = BTN_Y0 + (idx-1)*BTN_SP
         local isOn = (td.id == activeTab)
 
-        local indic = New("Frame", { Parent=Sidebar,
-            Position=UDim2.new(0,0,0,yPos+10), Size=UDim2.new(0,2,0,28),
-            BackgroundColor3=T.Highlight, ZIndex=14, Visible=isOn })
+        local indic = New("Frame", {
+            Parent   = Sidebar,
+            Position = UDim2.new(0,0,0,yPos+11),
+            Size     = UDim2.new(0,3,0,28),
+            BackgroundColor3 = T.Highlight,
+            ZIndex   = 14,
+            Visible  = isOn,
+        })
         Corner(indic, 2)
         tabIndics[td.id] = indic
 
-        local bg = New("Frame", { Parent=Sidebar, AnchorPoint=Vector2.new(.5,0),
-            Position=UDim2.new(.5,0,0,yPos), Size=UDim2.new(0,88,0,50),
-            BackgroundColor3=isOn and T.Accent or RGB(0,0,0),
-            BackgroundTransparency=isOn and 0 or 1, ZIndex=13 })
-        Corner(bg, 8)
+        local bg = New("Frame", {
+            Parent      = Sidebar,
+            AnchorPoint = Vector2.new(.5,0),
+            Position    = UDim2.new(.5,0,0,yPos),
+            Size        = UDim2.new(0,88,0,52),
+            BackgroundColor3 = isOn and T.Accent or RGB(0,0,0),
+            BackgroundTransparency = isOn and 0 or 1,
+            ZIndex = 13,
+        })
+        Corner(bg, 9)
 
-        local img = New("ImageLabel", { Parent=bg, AnchorPoint=Vector2.new(.5,0),
-            Position=UDim2.new(.5,0,0,7), Size=UDim2.new(0,19,0,19),
-            BackgroundTransparency=1, Image=td.img,
-            ImageColor3=isOn and T.Highlight or T.Subtext, ZIndex=14 })
-
-        local lbl = New("TextLabel", { Parent=bg, AnchorPoint=Vector2.new(.5,1),
-            Position=UDim2.new(.5,0,1,-5), Size=UDim2.new(1,-8,0,11),
-            BackgroundTransparency=1, Text=td.label,
-            TextColor3=isOn and T.Highlight or T.Subtext,
-            FontFace=FONT_BOLD, TextSize=9, ZIndex=14 })
-
-        local clk = New("TextButton", { Parent=bg, Size=UDim2.new(1,0,1,0),
-            BackgroundTransparency=1, Text="", ZIndex=15 })
+        local img = New("ImageLabel", {
+            Parent      = bg,
+            AnchorPoint = Vector2.new(.5,0),
+            Position    = UDim2.new(.5,0,0,8),
+            Size        = UDim2.new(0,21,0,21),   -- bigger tab icons
+            BackgroundTransparency = 1,
+            Image       = td.img,
+            ImageColor3 = isOn and T.Highlight or T.Subtext,
+            ZIndex      = 14,
+        })
+        local lbl = New("TextLabel", {
+            Parent      = bg,
+            AnchorPoint = Vector2.new(.5,1),
+            Position    = UDim2.new(.5,0,1,-5),
+            Size        = UDim2.new(1,-8,0,12),
+            BackgroundTransparency = 1,
+            Text        = td.label,
+            TextColor3  = isOn and T.Highlight or T.Subtext,
+            FontFace    = FONT_BOLD,
+            TextSize    = 10,   -- slightly bigger tab label
+            ZIndex      = 14,
+        })
+        local clk = New("TextButton", {
+            Parent = bg, Size = UDim2.new(1,0,1,0),
+            BackgroundTransparency = 1, Text = "", ZIndex = 15,
+        })
 
         tabBtns[td.id] = { bg=bg, img=img, lbl=lbl }
         clk.MouseButton1Up:Connect(function() SwitchTab(td.id) end)
         clk.MouseEnter:Connect(function()
             if activeTab ~= td.id then
-                TW(bg, EI,{BackgroundColor3=T.Tone,BackgroundTransparency=0})
-                TW(img,EI,{ImageColor3=T.Text}); TW(lbl,EI,{TextColor3=T.Text}) end end)
+                TW(bg, EI, {BackgroundColor3=T.Tone, BackgroundTransparency=0})
+                TW(img,EI, {ImageColor3=T.Text})
+                TW(lbl,EI, {TextColor3=T.Text})
+            end
+        end)
         clk.MouseLeave:Connect(function()
             if activeTab ~= td.id then
-                TW(bg, EI,{BackgroundTransparency=1})
-                TW(img,EI,{ImageColor3=T.Subtext}); TW(lbl,EI,{TextColor3=T.Subtext}) end end)
+                TW(bg, EI, {BackgroundTransparency=1})
+                TW(img,EI, {ImageColor3=T.Subtext})
+                TW(lbl,EI, {TextColor3=T.Subtext})
+            end
+        end)
     end
 
     -- ════════════════════════════════════════════════════════════════
@@ -662,125 +929,176 @@ local pillDefs = {
 
     local function SetStatus(state)
         if state == "idle" then
-            VerifyLabel.Text="Verify Key  →"; VerifyLabel.TextColor3=T.Title; HintLabel.Text=""
-            TW(VerifyBtn,EI,{BackgroundColor3=T.Highlight})
+            VerifyLabel.Text = "Verify Key  →"
+            VerifyLabel.TextColor3 = T.Title
+            HintLabel.Text = ""
+            TW(VerifyBtn, EI, {BackgroundColor3=T.Highlight})
         elseif state == "loading" then
-            TW(VerifyBtn,EI,{BackgroundColor3=T.Hover})
+            TW(VerifyBtn, EI, {BackgroundColor3=T.Hover})
         elseif state == "success" then
-            VerifyLabel.Text="Verified  ✓"; VerifyLabel.TextColor3=T.Background; HintLabel.Text=""
-            TW(VerifyBtn,EI,{BackgroundColor3=T.Success})
-            TW(VerifyFill,TweenInfo.new(.5,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{Size=UDim2.new(1,0,1,0)})
+            VerifyLabel.Text = "Verified  ✓"
+            VerifyLabel.TextColor3 = T.Background
+            HintLabel.Text = ""
+            TW(VerifyBtn, EI, {BackgroundColor3=T.Success})
+            TW(VerifyFill,
+                TweenInfo.new(.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                {Size=UDim2.new(1,0,1,0)}
+            )
         elseif state == "fail" then
-            VerifyLabel.Text="Try Again"; VerifyLabel.TextColor3=T.Title
-            HintLabel.Text="Key not recognised — please check and retry."
-            TW(VerifyBtn,EI,{BackgroundColor3=T.Highlight})
-            TW(InputStroke,EI,{Color=T.Error})
-            task.delay(.9,function() TW(InputStroke,EI,{Color=T.Border}) end)
+            VerifyLabel.Text = "Try Again"
+            VerifyLabel.TextColor3 = T.Title
+            HintLabel.Text = "Key not recognised — please check and retry."
+            TW(VerifyBtn, EI, {BackgroundColor3=T.Highlight})
+            TW(InputStroke, EI, {Color=T.Error})
+            task.delay(.9, function()
+                TW(InputStroke, EI, {Color=T.Border})
+            end)
         end
     end
     SetStatus("idle")
 
     -- ════════════════════════════════════════════════════════════════
-    -- SUBMIT
+    -- SHARED CLOSE / SUCCESS
+    -- ════════════════════════════════════════════════════════════════
+    local function AnimateClose(cb)
+        TW(Win, TweenInfo.new(.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+            {Position=UDim2.new(.5,0,.5,-40)})
+        task.wait(.25)
+        TW(Win, TweenInfo.new(.25), {BackgroundTransparency=1})
+        task.wait(.27)
+        if SG and SG.Parent then SG:Destroy() end
+        if cb then task.spawn(cb) end
+    end
+
+    -- ════════════════════════════════════════════════════════════════
+    -- KEY VERIFICATION  (used for both manual submit and auto-check)
+    -- ════════════════════════════════════════════════════════════════
+    local function CheckKey(key, isSaved)
+        processing = true
+        local ok  = false
+        local result
+        if Junkie and Junkie.check_key then
+            local s, r = pcall(function() return Junkie.check_key(key) end)
+            if s and r then
+                result = r
+                if type(r) == "boolean" then
+                    ok = r
+                elseif type(r) == "table" then
+                    ok = r.valid == true
+                       or r.message == "KEY_VALID"
+                       or r.message == "KEYLESS"
+                end
+            end
+        else
+            -- no Junkie provided — treat as valid so UI can be tested
+            task.wait(.5); ok = true
+        end
+        processing = false
+        return ok
+    end
+
+    -- ════════════════════════════════════════════════════════════════
+    -- SUBMIT (manual)
     -- ════════════════════════════════════════════════════════════════
     local function Submit()
         if processing then return end
         local key = InputBox.Text:gsub("%s+","")
         if key == "" then
-            HintLabel.Text="Please enter your key first."
-            TW(InputStroke,TweenInfo.new(.07),{Color=T.Error})
-            task.delay(.8,function() TW(InputStroke,EI,{Color=T.Border}); HintLabel.Text="" end)
+            HintLabel.Text = "Please enter your key first."
+            TW(InputStroke, TweenInfo.new(.07), {Color=T.Error})
+            task.delay(.8, function()
+                TW(InputStroke, EI, {Color=T.Border})
+                HintLabel.Text = ""
+            end)
             return
         end
-        processing=true; SetStatus("loading"); HintLabel.Text=""
 
-        local dots,stop = 0,false
+        SetStatus("loading")
+        HintLabel.Text = ""
+
+        local dots, stop = 0, false
         task.spawn(function()
             while not stop do
-                dots=(dots%3)+1
+                dots = (dots % 3) + 1
                 if VerifyLabel and VerifyLabel.Parent then
-                    VerifyLabel.Text="Checking"..string.rep(".",dots) end
-                task.wait(.33) end end)
+                    VerifyLabel.Text = "Checking" .. string.rep(".", dots)
+                end
+                task.wait(.33)
+            end
+        end)
 
         task.spawn(function()
-            local ok=false
-            if Junkie and Junkie.check_key then
-                local s,r=pcall(function() return Junkie.check_key(key) end)
-                if s and r then
-                    if type(r)=="boolean" then ok=r
-                    elseif type(r)=="table" then
-                        ok=r.valid==true or r.message=="KEY_VALID" or r.message=="KEYLESS" end end
-            else task.wait(.7); ok=true end
+            local ok = CheckKey(key, false)
+            stop = true
 
-            stop=true; processing=false
             if ok then
-    getgenv().SCRIPT_KEY = key -- <-- Das verlangt Junkie
-
-    saveKey(key)
-    SetStatus("success")
-
-    task.wait(1.4)
-
-    TW(Win,TweenInfo.new(.4,Enum.EasingStyle.Quad,Enum.EasingDirection.In),{
-        Position = UDim2.new(.5,0,.5,-40)
-    })
-    TW(Win,TweenInfo.new(.35),{
-        BackgroundTransparency = 1
-    })
-
-    task.wait(.42)
-    SG:Destroy()
-
-    task.spawn(onSuccess, key)
-else
-    SetStatus("fail")
-end
+                -- ── KEY ACCEPTED ──────────────────────────────────────────
+                getgenv().SCRIPT_KEY = key
+                saveKey(key)
+                SetStatus("success")
+                task.wait(1.4)
+                AnimateClose(function() onSuccess(key) end)
+            else
+                SetStatus("fail")
+            end
         end)
     end
 
     VerifyClick.MouseButton1Up:Connect(Submit)
-    UserInputService.InputBegan:Connect(function(inp,proc)
+    UserInputService.InputBegan:Connect(function(inp, proc)
         if proc then return end
-        if inp.KeyCode==Enum.KeyCode.Return or inp.KeyCode==Enum.KeyCode.KeypadEnter then Submit() end end)
-
-    task.spawn(function()
-        local saved=loadKey()
-        if not saved or not (Junkie and Junkie.check_key) then return end
-        local s,r=pcall(function() return Junkie.check_key(saved) end)
-        local valid=false
-        if s and r then
-            if type(r)=="boolean" then valid=r
-            elseif type(r)=="table" then valid=r.valid==true or r.message=="KEY_VALID" or r.message=="KEYLESS" end end
-       if valid then
-    getgenv().SCRIPT_KEY = saved -- <-- ebenfalls notwendig
-
-    InputBox.Text = saved
-    processing = true
-    SetStatus("success")
-
-    task.wait(1.4)
-
-    TW(Win,TweenInfo.new(.4,Enum.EasingStyle.Quad,Enum.EasingDirection.In),{
-        Position = UDim2.new(.5,0,.5,-40)
-    })
-    TW(Win,TweenInfo.new(.35),{
-        BackgroundTransparency = 1
-    })
-
-    task.wait(.42)
-    SG:Destroy()
-
-    task.spawn(onSuccess, saved)
-else
-    clearKey()
-end
+        if inp.KeyCode == Enum.KeyCode.Return
+        or inp.KeyCode == Enum.KeyCode.KeypadEnter then
+            Submit()
+        end
     end)
 
+    -- ════════════════════════════════════════════════════════════════
+    -- AUTO-CHECK SAVED KEY  ← runs AFTER UI is visible
+    -- ════════════════════════════════════════════════════════════════
+    task.spawn(function()
+        -- Let the UI fully render first
+        task.wait(0.05)
+
+        local saved = loadKey()
+        -- Also check if a key was already set in global env from a prior run
+        if not saved and getgenv().SCRIPT_KEY and getgenv().SCRIPT_KEY ~= "" then
+            saved = getgenv().SCRIPT_KEY
+        end
+
+        if not saved or not (Junkie and Junkie.check_key) then return end
+
+        -- Show a subtle "checking saved key…" hint
+        HintLabel.TextColor3 = T.Subtext
+        HintLabel.Text = "Checking saved key…"
+
+        local valid = CheckKey(saved, true)
+
+        if SG and not SG.Parent then return end  -- UI was closed during check
+
+        if valid then
+            InputBox.Text = saved
+            getgenv().SCRIPT_KEY = saved
+            SetStatus("success")
+            task.wait(1.4)
+            AnimateClose(function() onSuccess(saved) end)
+        else
+            HintLabel.Text = ""
+            HintLabel.TextColor3 = T.Error
+            clearKey()
+            -- clear stale global so Junkie doesn't reject before the user re-enters
+            getgenv().SCRIPT_KEY = nil
+        end
+    end)
+
+    -- ════════════════════════════════════════════════════════════════
+    -- CLOSE BUTTON
+    -- ════════════════════════════════════════════════════════════════
     local function Close()
-        TW(Win,TweenInfo.new(.3,Enum.EasingStyle.Quad,Enum.EasingDirection.In),{Position=UDim2.new(.5,0,.5,50)})
-        task.wait(.32); SG:Destroy(); task.spawn(onFail)
+        AnimateClose(onFail)
     end
     CloseBtn.MouseButton1Up:Connect(Close)
+
     return SG
 end
 
