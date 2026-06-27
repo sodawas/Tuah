@@ -1,0 +1,1370 @@
+--:: PAINT AND SEEK - DEV ::--
+
+--[[:: TODO: 
+
+]]
+
+--:: UI ::--
+local Repo = "https://raw.githubusercontent.com/sodawas";
+local Library = loadstring(game:HttpGet(Repo .. "/Tuah/refs/heads/main/UI/Library"))();
+local Setup = loadstring(game:HttpGet(Repo .. "/Tuah/refs/heads/main/UI/Manager"))();
+Setup:Basics();
+
+--:: Manager :--
+local controller = Setup:ClientController();
+local loop = Setup:Loop();
+local maid = Setup:Maid();
+local recorder = Setup:InputRecorder();
+local tweener = Setup:Tween();
+
+--:: Variables ::--
+local players = cloneref(game:GetService("Players"));
+local client = cloneref(players.LocalPlayer);
+local tweenservice = cloneref(game:GetService("TweenService"));
+local userinputservice = cloneref(game:GetService("UserInputService"));
+local runservice = cloneref(game:GetService("RunService"));
+local replicatedstorage = cloneref(game:GetService("ReplicatedStorage"));
+local httprequest = request or http_request;
+local telemetry = replicatedstorage:WaitForChild("MatchTelemetry", 10);
+local gameremotes = replicatedstorage:WaitForChild("GameRemotes");
+local crateevent = gameremotes:WaitForChild("CoinPurchase");
+local knifeskinmanager = require(replicatedstorage:WaitForChild("KnifeSkinManager"));
+
+--:: Globals ::--
+const INVITE = "HPa9UwxssG";
+const REPO = "https://raw.githubusercontent.com/sodawas/Data/refs/heads/main/";
+const UNIVERSE_PLACE_ID = 78724049937437;
+
+--:: Helpers ::--
+local function getGame(): string
+    local ok, info = pcall(function()
+        return game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId);
+    end);
+    return ok and info.Name or "N/A";
+end;
+
+local function getInvite(inv: string?): string
+    if inv == nil then 
+        return "no invite yet";
+    end;
+    return "https://discord.gg/" .. inv;
+end;
+
+local function getBuild(): string
+    local ok, response = pcall(function()
+        return request({
+            Url    = REPO .. "build.txt",
+            Method = "GET"
+        })
+    end);
+
+    if not ok or not response or response.StatusCode ~= 200 then
+        return "🔴 Unknown";
+    end;
+
+    local body = tostring(response.Body or "")
+    if body:find("Down") then
+        return "🔴 Down";
+    end;
+    return "🟢 " .. body:gsub("%s+", "");
+end;
+
+local function clientKick(msg: string?)
+    msg = msg or "//"
+    if typeof(msg) == "string" then 
+        client:Kick(msg);
+    end;
+end;
+
+--:: Character Handler ::--
+type Player = {
+    name: string;
+    character: any;
+    root: any;
+    humanoid: any;
+};
+
+local character = {};
+character.__index = character;
+
+function character.new(): Player
+    local self = setmetatable({}, character);
+    self.name = client.Name;
+    self.character = client.Character or client.CharacterAdded:Wait();
+    self.root = self.character:WaitForChild("HumanoidRootPart");
+    self.humanoid = self.character:FindFirstChildOfClass("Humanoid");
+
+    client.CharacterAdded:Connect(function(new)
+        self.character = new;
+        self.root = new:WaitForChild("HumanoidRootPart");
+        self.humanoid = new:FindFirstChildOfClass("Humanoid");
+    end);
+    return self;
+end;
+
+function character:getPosition()
+    if not self.root then 
+        return nil; 
+    end;
+    return self.root.Position;
+end;
+
+function character:isAlive(): boolean
+    if not self.humanoid then 
+        return false; 
+    end;
+    return self.humanoid.Health > 0;
+end;
+
+function character:teleportTo(position: Vector3)
+    local ok, no = pcall(function()
+        self.root.CFrame = CFrame.new(position)
+    end)
+    if not ok then print("teleport error: " .. tostring(no)) end;
+end;
+
+--:: Utils ::--
+local utils = {};
+utils.__index = utils;
+
+function utils.new()
+    return setmetatable({}, utils);
+end;
+
+function utils:getAllPlayers(): {any}
+    local list = {};
+    for _, player in ipairs(players:GetPlayers()) do
+        if player ~= players.LocalPlayer then
+            table.insert(list, player);
+        end;
+    end;
+    return list;
+end;
+
+local player = character.new();
+local utils_ = utils.new();
+
+do --:: Functions
+  local esp_drawings = {};
+    local dead_players = {};
+
+    local function hookCorpses(folder)
+        folder.ChildAdded:Connect(function(child)
+            local name = child.Name:match("^(.-)_Corpse$");
+            if name then
+                dead_players[name] = true;
+            end;
+        end);
+    end;
+
+    local corpses_folder = workspace:FindFirstChild("Corpses");
+    if corpses_folder then
+        hookCorpses(corpses_folder);
+    end;
+
+    workspace.ChildAdded:Connect(function(child)
+        if child.Name == "Corpses" then
+            hookCorpses(child);
+        end;
+    end);
+
+    players.PlayerAdded:Connect(function(p)
+        dead_players[p.Name] = nil;
+    end);
+
+    local function watchCharacter(p, char)
+        char.ChildAdded:Connect(function(child)
+            if child.Name == "SeekerKnife" then
+                dead_players[p.Name] = nil;
+            end;
+        end);
+    end;
+
+    for _, p in ipairs(players:GetPlayers()) do
+        if p.Character then watchCharacter(p, p.Character); end;
+        p.CharacterAdded:Connect(function(char)
+            dead_players[p.Name] = nil;
+            watchCharacter(p, char);
+        end);
+    end;
+
+    players.PlayerAdded:Connect(function(p)
+        p.CharacterAdded:Connect(function(char)
+            dead_players[p.Name] = nil;
+            watchCharacter(p, char);
+        end);
+    end);
+
+    local function createDrawings(player_obj)
+        local drawings = {};
+        
+        drawings.name = Drawing.new("Text");
+        drawings.name.Visible = false;
+        drawings.name.Center = true;
+        drawings.name.Outline = true;
+        drawings.name.OutlineColor = Color3.fromRGB(0, 0, 0);
+        drawings.name.Size = 14;
+        drawings.name.Font = Drawing.Fonts.Plex;
+        
+        drawings.distance = Drawing.new("Text");
+        drawings.distance.Visible = false;
+        drawings.distance.Center = true;
+        drawings.distance.Outline = true;
+        drawings.distance.OutlineColor = Color3.fromRGB(0, 0, 0);
+        drawings.distance.Size = 12;
+        drawings.distance.Font = Drawing.Fonts.Plex;
+
+        drawings.box_top    = Drawing.new("Line"); drawings.box_top.Visible = false;    drawings.box_top.Thickness = 1;
+        drawings.box_bottom = Drawing.new("Line"); drawings.box_bottom.Visible = false; drawings.box_bottom.Thickness = 1;
+        drawings.box_left   = Drawing.new("Line"); drawings.box_left.Visible = false;   drawings.box_left.Thickness = 1;
+        drawings.box_right  = Drawing.new("Line"); drawings.box_right.Visible = false;  drawings.box_right.Thickness = 1;
+
+        esp_drawings[player_obj] = drawings;
+        return drawings;
+    end;
+
+    local function removeDrawings(player_obj)
+        local drawings = esp_drawings[player_obj];
+        if drawings then
+            for _, d in pairs(drawings) do d:Remove(); end;
+            esp_drawings[player_obj] = nil;
+        end;
+    end;
+
+    local function isSeeker(p)
+        local c = p.Character;
+        if not c then return false; end;
+        return c:FindFirstChild("SeekerKnife") ~= nil;
+    end;
+
+    local function isDead(p)
+        return dead_players[p.Name] == true;
+    end;
+
+    local function updateDrawings()
+        local camera = workspace.CurrentCamera;
+        if not camera then return; end;
+
+        local my_char = client.Character;
+        local my_root = my_char and my_char:FindFirstChild("HumanoidRootPart");
+        if not my_root then return; end;
+
+        local esp_names    = getgenv().esp_names or false;
+        local esp_dist     = getgenv().esp_distance or false;
+        local esp_box      = getgenv().esp_box or false;
+        local esp_max      = getgenv().esp_max_distance or 1000;
+        local seeker_color = getgenv().esp_seeker_color or Color3.fromRGB(255, 80, 80);
+        local hider_color  = getgenv().esp_hider_color or Color3.fromRGB(80, 180, 255);
+
+        local i_am_seeker = isSeeker(client);
+
+        for _, p in ipairs(players:GetPlayers()) do
+            if p == client then continue; end;
+
+            local drawings = esp_drawings[p];
+            if not drawings then drawings = createDrawings(p); end;
+
+            local target_is_seeker = isSeeker(p);
+
+            local should_show;
+            if i_am_seeker then
+                should_show = not target_is_seeker and not isDead(p);
+            else
+                should_show = target_is_seeker;
+            end;
+
+            local char = p.Character;
+            local root = char and char:FindFirstChild("HumanoidRootPart");
+
+            if not should_show or not root then
+                for _, d in pairs(drawings) do d.Visible = false; end;
+                continue;
+            end;
+
+            local dist = (root.Position - my_root.Position).Magnitude;
+            if dist > esp_max then
+                for _, d in pairs(drawings) do d.Visible = false; end;
+                continue;
+            end;
+
+            local screen_pos, on_screen = camera:WorldToViewportPoint(root.Position);
+            if not on_screen then
+                for _, d in pairs(drawings) do d.Visible = false; end;
+                continue;
+            end;
+
+            local pos2d = Vector2.new(screen_pos.X, screen_pos.Y);
+            local color = target_is_seeker and seeker_color or hider_color;
+
+            drawings.name.Visible = esp_names;
+            drawings.name.Text = p.Name;
+            drawings.name.Position = pos2d + Vector2.new(0, -32);
+            drawings.name.Color = color;
+
+            drawings.distance.Visible = esp_dist;
+            drawings.distance.Text = math.round(dist) .. "m";
+            drawings.distance.Position = pos2d + Vector2.new(0, -17);
+            drawings.distance.Color = Color3.fromRGB(200, 200, 200);
+
+            if esp_box then
+                local head_pos = camera:WorldToViewportPoint(root.Position + Vector3.new(0, 2.5, 0));
+                local foot_pos = camera:WorldToViewportPoint(root.Position + Vector3.new(0, -3, 0));
+                local h = math.abs(head_pos.Y - foot_pos.Y);
+                local w = h * 0.5;
+                local x = screen_pos.X - w / 2;
+
+                drawings.box_top.From    = Vector2.new(x, head_pos.Y);
+                drawings.box_top.To      = Vector2.new(x + w, head_pos.Y);
+                drawings.box_bottom.From = Vector2.new(x, foot_pos.Y);
+                drawings.box_bottom.To   = Vector2.new(x + w, foot_pos.Y);
+                drawings.box_left.From   = Vector2.new(x, head_pos.Y);
+                drawings.box_left.To     = Vector2.new(x, foot_pos.Y);
+                drawings.box_right.From  = Vector2.new(x + w, head_pos.Y);
+                drawings.box_right.To    = Vector2.new(x + w, foot_pos.Y);
+
+                for _, line in pairs({ drawings.box_top, drawings.box_bottom, drawings.box_left, drawings.box_right }) do
+                    line.Visible = true;
+                    line.Color = color;
+                end;
+            else
+                drawings.box_top.Visible = false;
+                drawings.box_bottom.Visible = false;
+                drawings.box_left.Visible = false;
+                drawings.box_right.Visible = false;
+            end;
+        end;
+
+        for p, _ in pairs(esp_drawings) do
+            if not players:FindFirstChild(p.Name) then
+                removeDrawings(p);
+            end;
+        end;
+    end;
+
+    players.PlayerRemoving:Connect(removeDrawings);
+
+    task.spawn(function()
+        while true do task.wait(); pcall(updateDrawings); end;
+    end);
+
+    local function parsetelemetry(value)
+        if not value or value == "" then return; end;
+
+        local phase, hiders, seekers, message = value:match("^(%u+)%s*|%s*hiders=(%d+)%s+seekers=(%d+)%s*|%s*(.+)$");
+        if not phase then return; end;
+
+        if phase == "HIDE" and message:find("role reveal") then
+            dead_players = {};
+            if getgenv().match_log_ref then
+                getgenv().match_log_ref:Clear();
+            end;
+        end;
+
+        local my_char = client.Character;
+        local i_am_seeker = my_char and my_char:FindFirstChild("SeekerKnife") ~= nil;
+
+        local role_text;
+        if phase == "INTERMISSION" then
+            role_text = "Role: ⏳ Lobby";
+        elseif i_am_seeker then
+            role_text = "Role: 🔪 Seeker";
+        else
+            role_text = "Role: 🎨 Hider";
+        end;
+
+        if getgenv().role_label_ref then
+            getgenv().role_label_ref:ChangeText(role_text .. "  |  👥 H:" .. hiders .. " S:" .. seekers);
+        end;
+
+        local icon = "";
+        if phase == "ROUND" then icon = "🔍 ";
+        elseif phase == "HIDE" then icon = "🎨 ";
+        elseif phase == "RESOLVE" then icon = "🏁 ";
+        elseif phase == "INTERMISSION" then icon = "⏳ "; end;
+
+        if getgenv().match_log_ref then
+            getgenv().match_log_ref:AddEntry(icon .. message);
+        end;
+    end;
+
+    if telemetry then
+        parsetelemetry(telemetry.Value);
+        telemetry.Changed:Connect(parsetelemetry);
+    end;
+end;
+
+local crate_names = {};
+local crate_shop_script = client:WaitForChild("PlayerScripts"):WaitForChild("CrateShopNewClient", 10);
+
+if crate_shop_script then
+    for i = 1, 100 do
+        local ok, name, value = pcall(debug.getupvalue, crate_shop_script, i);
+        if not ok then break; end;
+        if type(value) == "table" then
+            local is_crate_table = false;
+            for k, v in pairs(value) do
+                if type(k) == "string" and k:find("Crate") and type(v) == "number" then
+                    is_crate_table = true;
+                    break;
+                end;
+            end;
+            if is_crate_table then
+                for crate_name, _ in pairs(value) do
+                    table.insert(crate_names, crate_name);
+                end;
+                break;
+            end;
+        end;
+    end;
+end;
+
+if #crate_names == 0 then
+    crate_names = { "Wooden Crate", "Silver Crate", "Golden Crate", "Brainrot Crate", "Kawaii Kitchen Crate", "Backrooms Crate", "Jurassic Crate" };
+end;
+
+table.sort(crate_names);
+
+local crate_maid = maid.new();
+
+local function isUnboxing()
+    return client:GetAttribute("Unboxing") == true;
+end;
+
+local function autoOpenCratesLoop()
+    crate_maid:DoCleaning();
+
+    task.spawn(function()
+        while getgenv().auto_open_crate_enabled do
+            local crate_name = getgenv().selected_crate or "Wooden Crate";
+
+            if not isUnboxing() then
+                pcall(function()
+                    crateevent:FireServer(crate_name);
+                end);
+                local timeout = 0;
+                repeat
+                    task.wait(0.1);
+                    timeout += 0.1;
+                until isUnboxing() or timeout > 5;
+                timeout = 0;
+                repeat
+                    task.wait(0.1);
+                    timeout += 0.1;
+                until not isUnboxing() or timeout > 15;
+            else
+                task.wait(0.1);
+            end;
+            task.wait(0.3);
+        end;
+    end);
+
+    local unbox_result = replicatedstorage.GameRemotes.UnboxResult;
+    crate_maid:GiveTask(unbox_result.OnClientEvent:Connect(function(data)
+        if type(data) ~= "table" or not data.won then return; end;
+
+        local won_name = data.won.name;
+        local won_skin_id = data.won.skinId;
+
+        if getgenv().match_log_ref then
+            getgenv().match_log_ref:AddEntry("📦 Won: " .. tostring(won_name) .. " (" .. tostring(data.won.rarity) .. ")");
+        end;
+
+        local stop_target = getgenv().stop_on_knife_selected;
+        if getgenv().stop_on_drop_enabled and stop_target and stop_target ~= "None" then
+            if won_name == stop_target then
+                local enabled_flag = Library.Created.Flags["auto_open_crate"];
+                if enabled_flag then
+                    enabled_flag:SetValue(false);
+                end;
+                Library:Notify("Stopped: " .. tostring(won_name) .. " obtained!", 8, "Crate Notification");
+                crate_maid:DoCleaning();
+            end;
+        end;
+    end));
+end;
+
+local knife_choices = { "None" };
+for _, skin in ipairs(knifeskinmanager.SKINS) do
+    table.insert(knife_choices, skin.name);
+end;
+
+table.sort(knife_choices, function(a, b)
+    if a == "None" then return true; end;
+    if b == "None" then return false; end;
+    return a < b;
+end);
+
+local coins_maid = maid.new();
+
+local function isInMatch()
+    if not telemetry then return true; end;
+    local value = telemetry.Value;
+    if not value or value == "" then return false; end;
+
+    local phase = value:match("^(%u+)");
+    return phase == "ROUND" or phase == "HIDE";
+end;
+
+local function autoCollectCoinsLoop()
+    coins_maid:DoCleaning();
+
+    task.spawn(function()
+        while getgenv().auto_collect_coins_enabled do
+            if isInMatch() then
+                local coins_folder = workspace:FindFirstChild("SpawnedCoins");
+                local my_root = player.root;
+
+                if coins_folder and my_root then
+                    for _, coin in ipairs(coins_folder:GetChildren()) do
+                        if coin:IsA("BasePart") and coin.Parent then
+                            pcall(function()
+                                firetouchinterest(coin, my_root, 0);
+                                firetouchinterest(coin, my_root, 1);
+                            end);
+                        end;
+                    end;
+                end;
+            end;
+            task.wait(0.1);
+        end;
+    end);
+end;
+
+local hide_maid = maid.new();
+
+local EXCLUDED_NAMES = {
+    ["CityBorder"] = true,
+    ["CityCarBorder"] = true,
+    ["SpawnPoints"] = true,
+};
+
+local function getHideSpots()
+    local map = workspace:FindFirstChild("ActiveMap");
+    if not map then return {}; end;
+
+    local spots = {};
+    for _, obj in ipairs(map:GetChildren()) do
+        if obj:IsA("Model") and not EXCLUDED_NAMES[obj.Name] then
+            local ok, cf, size = pcall(function() return obj:GetBoundingBox(); end);
+            if ok then
+                local max_dim = math.max(size.X, size.Y, size.Z);
+                local min_dim = math.min(size.X, size.Y, size.Z);
+                if max_dim <= 10 and min_dim >= 1.5 then
+                    table.insert(spots, { model = obj, cf = cf, size = size });
+                end;
+            end;
+        end;
+    end;
+    return spots;
+end;
+
+local function isSeekerNearby(radius)
+    local my_root = player.root;
+    if not my_root then return false; end;
+
+    for _, p in ipairs(players:GetPlayers()) do
+        if p ~= client then
+            local char = p.Character;
+            local root = char and char:FindFirstChild("HumanoidRootPart");
+            if root then
+                local is_seeker = char:FindFirstChild("SeekerKnife") ~= nil;
+                if is_seeker then
+                    local dist = (root.Position - my_root.Position).Magnitude;
+                    if dist <= radius then
+                        return true, p.Name, dist;
+                    end;
+                end;
+            end;
+        end;
+    end;
+    return false;
+end;
+
+local function findGoodHideSpot(spots, avoid_position)
+    if #spots == 0 then return nil; end;
+    local shuffled = {};
+
+    for i, v in ipairs(spots) do shuffled[i] = v; end;
+    for i = #shuffled, 2, -1 do
+        local j = math.random(i);
+        shuffled[i], shuffled[j] = shuffled[j], shuffled[i];
+    end;
+
+    for _, spot in ipairs(shuffled) do
+        local cf, size = spot.cf, spot.size;
+
+        if avoid_position then
+            local dist_from_avoid = (cf.Position - avoid_position).Magnitude;
+            if dist_from_avoid < 15 then continue; end;
+        end;
+
+        local radius = math.max(size.X, size.Z) / 2 + 1.5;
+        local angles = { 0, 90, 180, 270, 45, 135, 225, 315 };
+        for _, angle_offset in ipairs(angles) do
+            local rad = math.rad(angle_offset);
+            local dir = Vector3.new(math.cos(rad), 0, math.sin(rad));
+            local test_pos = cf.Position + dir * radius;
+            local params = RaycastParams.new();
+            params.FilterType = Enum.RaycastFilterType.Exclude;
+            params.FilterDescendantsInstances = { player.character };
+
+            local down_result = workspace:Raycast(test_pos + Vector3.new(0, 10, 0), Vector3.new(0, -50, 0), params);
+            if down_result then
+                local floor_pos = down_result.Position + Vector3.new(0, 3, 0);
+                local clear_check = workspace:Raycast(floor_pos, dir * -1.5, params);
+                if not clear_check then
+                    return CFrame.new(floor_pos, cf.Position);
+                end;
+            end;
+        end;
+    end;
+    return nil;
+end;
+
+local function teleportToHideSpot(avoid_position)
+    local spots = getHideSpots();
+    local target_cf = findGoodHideSpot(spots, avoid_position);
+
+    if target_cf and player.root then
+        player:teleportTo(target_cf.Position);
+        return true;
+    end;
+    return false;
+end;
+
+local function autoHideLoop()
+    hide_maid:DoCleaning();
+
+    task.spawn(function()
+        local last_hide_time = 0;
+        while getgenv().auto_hide_enabled do
+            local check_radius = getgenv().hide_seeker_radius or 40;
+            local cooldown = getgenv().hide_flee_cooldown or 2;
+            local nearby, seeker_name, dist = isSeekerNearby(check_radius);
+
+            if nearby and (os.clock() - last_hide_time) >= cooldown then
+                local current_pos = player.root and player.root.Position;
+                local success = teleportToHideSpot(current_pos);
+
+                if success then
+                    last_hide_time = os.clock();
+                    if getgenv().match_log_ref then
+                        Library:Notify("Fled from " .. tostring(seeker_name) .. " (" .. math.floor(dist) .. "m)", 3, "Notification")
+                    end;
+                end;
+            end;
+            task.wait(0.3);
+        end;
+    end);
+end;
+
+local taunt_maid = maid.new();
+
+local function autoTauntLoop()
+    taunt_maid:DoCleaning();
+
+    task.spawn(function()
+        while getgenv().auto_taunt_enabled do
+            pcall(function()
+                gameremotes.ManualTaunt:FireServer();
+            end);
+            task.wait(5);
+        end;
+    end);
+end;
+
+local movement_maid = maid.new();
+
+local function applyMovementStats()
+    local humanoid = player.character and player.character:FindFirstChildOfClass("Humanoid");
+    if not humanoid then return; end;
+
+    if getgenv().custom_walkspeed_enabled then
+        humanoid.WalkSpeed = getgenv().custom_walkspeed_value or 16;
+    end;
+end;
+
+movement_maid:GiveTask(client.CharacterAdded:Connect(function(new_char)
+    task.wait(0.5);
+    applyMovementStats();
+end));
+
+local daily_maid = maid.new();
+
+local function autoDailyLoop()
+    daily_maid:DoCleaning();
+
+    task.spawn(function()
+        local daily_utils = require(replicatedstorage:WaitForChild("DailyRewardUtils"));
+        local orig_interval = daily_utils.CLAIM_INTERVAL;
+        daily_utils.CLAIM_INTERVAL = 1;
+
+        while getgenv().auto_daily_enabled do
+            pcall(function()
+                gameremotes.DailyRewardsClaim:FireServer();
+            end);
+            task.wait(3);
+        end;
+
+        --[[ restore ]]--
+        daily_utils.CLAIM_INTERVAL = orig_interval;
+    end);
+end;
+
+local knife_remotes = replicatedstorage:WaitForChild("Knife"):WaitForChild("Remotes");
+local killaura_maid = maid.new();
+
+local function killauraLoop()
+    killaura_maid:DoCleaning();
+
+    task.spawn(function()
+        while getgenv().killaura_enabled do
+            local my_char = client.Character;
+            local has_knife = my_char and my_char:FindFirstChild("SeekerKnife");
+
+            if has_knife then
+                local radius = getgenv().killaura_radius or math.huge;
+                local mode = getgenv().killaura_mode or "stab";
+                local my_root = my_char and my_char:FindFirstChild("HumanoidRootPart");
+
+                for _, p in ipairs(players:GetPlayers()) do
+                    if p == client then continue; end;
+
+                    local char = p.Character;
+                    local root = char and char:FindFirstChild("HumanoidRootPart");
+                    local is_seeker = char and char:FindFirstChild("SeekerKnife") ~= nil;
+
+                    if not root or is_seeker then continue; end;
+
+                    local dist = my_root and (root.Position - my_root.Position).Magnitude or 0;
+                    if dist > radius then continue; end;
+
+                    local hit_part = char:FindFirstChild("HumanoidRootPart")
+                        or char:FindFirstChild("Torso")
+                        or char:FindFirstChild("UpperTorso")
+                        or root;
+
+                    if not hit_part then continue; end;
+
+                    pcall(function()
+                        if mode == "throw" then
+                            local dir = my_root and (root.Position - my_root.Position).Unit or Vector3.new(0,0,1);
+                            knife_remotes.RenderKnifeProjectile:FireServer({
+                                t0 = workspace:GetServerTimeNow(),
+                                x0 = my_root and my_root.Position or root.Position,
+                                dir = dir,
+                                skinTexture = "",
+                                effectId = "",
+                                meshId = "",
+                                meshScale = Vector3.new(1,1,1),
+                                meshTextureId = "",
+                                skinId = ""
+                            });
+                            task.wait(0.05);
+                            knife_remotes.KnifeHit:FireServer("throw", hit_part);
+                        else
+                            knife_remotes.KnifeHit:FireServer("stab", hit_part);
+                        end;
+                    end);
+
+                    task.wait(getgenv().killaura_delay or 0.1);
+                end;
+            end;
+
+            task.wait(0.05);
+        end;
+    end);
+end;
+
+--:: UI Managing ::--
+local Window = Library:CreateWindow({ Title = "", Icon = { "rbxassetid://101308344257609", UDim2.new(0, 125, 0, 125) } });
+local Tabs = {
+    Dashboard = Window:CreateTab({ Title = "Dashboard", Icon = "rbxassetid://140668067595253" }),
+    Misc = Window:CreateTab({ Title = "Misc", Icon = "rbxassetid://100148767701369" }),
+    Esp = Window:CreateTab({ Title = "Esp", Icon = "rbxassetid://80179645239218" }),
+    Config = Window:CreateTab({ Title = "Config", Icon = "rbxassetid://94377454418556" }),
+};
+local Sections = {
+    Dashboard = Tabs.Dashboard:CreateSection({ Title = "Info", Side = "Full", }),
+    About = Tabs.Dashboard:CreateSection({ Title = "About", Side = "Left", }),
+    Insights = Tabs.Dashboard:CreateSection({ Title = "Insights", Side = "Right", }),
+    UI_Controls = Tabs.Config:CreateSection({ Title = "UI", Side = "Left", }),
+    Save = Tabs.Config:CreateSection({ Title = "Save", Side = "Right", }),
+    Themes = Tabs.Config:CreateSection({ Title = "Preset", Side = "Left", }),
+    Custom_Themes = Tabs.Config:CreateSection({ Title = "Custom Theme", Side = "Right", }),
+    Esp = Tabs.Esp:CreateSection({ Title = "Seeker", Side = "Left" }),
+    EspConfig = Tabs.Esp:CreateSection({ Title = "Config", Side = "Right" }),
+    MatchLog = Tabs.Esp:CreateSection({ Title = "Match Log", Side = "Left" }),
+    Crates = Tabs.Misc:CreateSection({ Title = "Crates", Side = "Left" }),
+    Automatic = Tabs.Misc:CreateSection({ Title = "Automatic", Side = "Right" }),
+    Troll = Tabs.Misc:CreateSection({ Title = "Troll", Side = "Left" }),
+    Movement = Tabs.Misc:CreateSection({ Title = "Movement", Side = "Right" }),
+    Seeker = Tabs.Misc:CreateSection({ Title = "Kill", Side = "Left" }),
+    Hide = Tabs.Misc:CreateSection({ Title = "Hide", Side = "Right" }),
+};
+
+local greeting; greeting = Sections.Dashboard:CreateLabel({ 
+    Text = "Welcome, ".. tostring(player.name) .. "!", 
+    Alignment = "Center" 
+});
+
+local discord_members; discord_members = Sections.About:CreateLabel({
+     Text = "Members: 1,7k", 
+     Alignment = "Center" 
+});
+
+local discord_invite_txt; discord_invite_txt = Sections.About:CreateLabel({
+     Text = "discord.gg/" .. tostring(INVITE), 
+     Alignment = "Center" 
+});
+
+local discord_invite; discord_invite = Sections.About:CreateButton({ 
+    Text = "Copy Invite", 
+    Callback = function()
+        local link = getInvite(INVITE);
+        setclipboard(link);
+        Library:Notify("Discord Invite copied!", 5, "Notification");
+        discord_invite:ChangeText("Copied!");
+        task.wait(2);
+        discord_invite:ChangeText("Copy Invite");
+    end;
+});
+
+local place_id; place_id = Sections.Insights:CreateButton({ 
+    Text = "".. tostring(game.PlaceId), 
+    Callback = function() 
+end})
+
+local game_; game_ = Sections.Insights:CreateButton({ 
+    Text = "".. tostring(getGame()), 
+    Callback = function() 
+end})
+
+local build; build = Sections.Insights:CreateButton({ 
+    Text = "Build: ".. getBuild(), 
+    Callback = function() 
+end})
+
+local save; save = Sections.Save:CreateButton({
+    Text = "Save Config",
+    Alignment = "Left",
+    Callback = function()
+        Library:Save();
+        Library:Notify("Config Saved", 5, "Notification");
+    end,
+})
+
+local load; load = Sections.Save:CreateButton({
+    Text = "Load Config",
+    Alignment = "Left",
+    Callback = function()
+        Library:Load();
+        Library:Notify("Loaded saved Config", 5, "Notification");
+    end,
+})
+    
+local auto_save; auto_save = Sections.Save:CreateToggle({
+    Text = "Auto Save";
+    Subtext = "";
+    Alignment = "Left";
+    Default = true;
+    Callback = function(Value)
+        getgenv().save_ts = Value;
+            task.spawn(function()
+            while getgenv().save_ts do
+                task.wait(math.random(1,2));
+                if getgenv().save_ts then
+                    Library:Save();
+                end;
+            end;
+        end);
+    end;    
+    Flag = "auto_save";
+})
+
+local ui_toggle; ui_toggle = Sections.UI_Controls:CreateKeybind({
+    Text = "Toggle UI";
+    Subtext = "Hide Menu with Key" ;
+    Alignment = "Left"; 
+    Default = "N"; 
+    Callback = function() 
+        Window:Visibility();
+    end;
+    Flag = "ui_keybind";
+});
+    
+local unload; unload = Sections.UI_Controls:CreateButton({
+    Text = "Exit Menu";
+    Alignment = "Center"; 
+    Callback = function()
+        getgenv().save_ts = false;
+        Library:Save();
+        Window:Exit();    
+    end;
+});
+
+local ui_theme; ui_theme = Sections.Themes:CreateDropdown({
+    Text = "Theme";
+    Subtext = "";
+    Alignment = "Left";
+    Choices = { "Default", "Lotus", "Abyss", "Ember", "Frost", "Rose", "Void", "Sand" };
+    Multi = false;
+    Default = "Default";
+    Callback = function(Value)
+        local enabled_flag = Library.Created.Flags["ui_theme_enabled"];
+        if enabled_flag and enabled_flag.Value then
+            Library.Theme = tostring(Value);
+        end;
+    end;
+    Flag = "ui_theme";
+})
+
+local ui_theme_enabled; ui_theme_enabled = Sections.Themes:CreateToggle({
+    Text = "Set Theme";
+    Subtext = "";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(Value)
+        if Value then
+            local theme_flag = Library.Created.Flags["ui_theme"];
+            local theme_name = theme_flag and theme_flag.Value;
+            Library.Theme = (theme_name and Library.Themes[theme_name]) and theme_name or "Default";
+        else
+            Library.Theme = "Default";
+        end;
+    end;
+    Flag = "ui_theme_enabled";
+})
+
+local rainbow_mode; rainbow_mode = Sections.Themes:CreateToggle({
+    Text = "Rainbow Mode";
+    Subtext = "";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(Value)
+        getgenv().rainbow_mode = Value;
+        if Value then
+            task.spawn(function()
+                local t = 0;
+                while getgenv().rainbow_mode do
+                    t = (t + 0.002) % 1;
+
+                    if not Library.Themes["Custom"] then
+                        Library.Themes["Custom"] = {};
+                        for k, v in pairs(Library.Themes["Default"]) do
+                            Library.Themes["Custom"][k] = v;
+                        end;
+                    end;
+
+                    local primary = Color3.fromHSV(t, 1, 1);
+                    local secondary = Color3.fromHSV((t + 0.05) % 1, 0.7, 0.8);
+                    local hover = Color3.fromHSV((t + 0.02) % 1, 0.8, 0.6);
+
+                    Library.Themes["Custom"]["Highlight"] = primary;
+                    Library.Themes["Custom"]["Selected"] = secondary;
+                    Library.Themes["Custom"]["Hover"] = hover;
+                    Library.Theme = "Custom";
+                    task.wait();
+                end;
+            end);
+        else
+            Library.Theme = "Default";
+        end;
+    end;
+    Flag = "rainbow_mode";
+})
+
+local color_title = Sections.Custom_Themes:CreateColorPicker({
+    Text = "Icon / Title";
+    Alignment = "Left";
+    Default = Color3.fromRGB(255, 255, 255);
+    ThemeKey = "Title";
+    Flag = "color_title";
+})
+
+local color_background = Sections.Custom_Themes:CreateColorPicker({
+    Text = "Background";
+    Alignment = "Left";
+    Default = Color3.fromRGB(9, 9, 13);
+    ThemeKey = "Background";
+    Flag = "color_background";
+})
+
+local color_background2 = Sections.Custom_Themes:CreateColorPicker({
+    Text = "Background2";
+    Alignment = "Left";
+    Default = Color3.fromRGB(10, 10, 15);
+    ThemeKey = "Background2";
+    Flag = "color_background2";
+})
+
+local color_tone = Sections.Custom_Themes:CreateColorPicker({
+    Text = "Tone";
+    Alignment = "Left";
+    Default = Color3.fromRGB(23, 22, 32);
+    ThemeKey = "Tone";
+    Flag = "color_tone";
+})
+
+local color_accent1 = Sections.Custom_Themes:CreateColorPicker({
+    Text = "Accent";
+    Alignment = "Left";
+    Default = Color3.fromRGB(19, 19, 23);
+    ThemeKey = "Accent1";
+    Flag = "color_accent1";
+})
+
+local color_highlight = Sections.Custom_Themes:CreateColorPicker({
+    Text = "Highlight";
+    Alignment = "Left";
+    Default = Color3.fromRGB(121, 115, 234);
+    ThemeKey = "Highlight";
+    Flag = "color_highlight";
+})
+
+local color_hover = Sections.Custom_Themes:CreateColorPicker({
+    Text = "Hover";
+    Alignment = "Left";
+    Default = Color3.fromRGB(77, 75, 116);
+    ThemeKey = "Hover";
+    Flag = "color_hover";
+})
+
+local color_selected = Sections.Custom_Themes:CreateColorPicker({
+    Text = "Selected";
+    Alignment = "Left";
+    Default = Color3.fromRGB(117, 113, 175);
+    ThemeKey = "Selected";
+    Flag = "color_selected";
+})
+
+local color_text = Sections.Custom_Themes:CreateColorPicker({
+    Text = "Text";
+    Alignment = "Left";
+    Default = Color3.fromRGB(199, 199, 199);
+    ThemeKey = "Text";
+    Flag = "color_text";
+})
+
+local color_subtext = Sections.Custom_Themes:CreateColorPicker({
+    Text = "Subtext";
+    Alignment = "Left";
+    Default = Color3.fromRGB(95, 95, 95);
+    ThemeKey = "Subtext";
+    Flag = "color_subtext";
+})
+
+local color_icons = Sections.Custom_Themes:CreateColorPicker({
+    Text = "Icons";
+    Alignment = "Left";
+    Default = Color3.fromRGB(199, 199, 199);
+    ThemeKey = "Icons";
+    Flag = "color_icons";
+})
+
+
+local role_label; role_label = Sections.Esp:CreateLabel({
+    Text = "Role: ⏳ Waiting...";
+    Alignment = "Left";
+});
+getgenv().role_label_ref = role_label;
+
+local esp_names_toggle; esp_names_toggle = Sections.Esp:CreateToggle({
+    Text = "Show Names";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(Value) getgenv().esp_names = Value; end;
+    Flag = "esp_names";
+})
+
+local esp_distance_toggle; esp_distance_toggle = Sections.Esp:CreateToggle({
+    Text = "Show Distance";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(Value) getgenv().esp_distance = Value; end;
+    Flag = "esp_distance";
+})
+
+local esp_box_toggle; esp_box_toggle = Sections.Esp:CreateToggle({
+    Text = "Show Box";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(Value) getgenv().esp_box = Value; end;
+    Flag = "esp_box";
+})
+
+local esp_max_dist; esp_max_dist = Sections.EspConfig:CreateSlider({
+    Text = "Max Distance";
+    Alignment = "Left";
+    Default = 500;
+    Callback = function(Value) getgenv().esp_max_distance = Value; end;
+    Flag = "esp_max_distance";
+    Floats = 0;
+    Limits = { 50, 2000 };
+    Increment = 50;
+})
+
+local esp_seeker_color; esp_seeker_color = Sections.EspConfig:CreateColorPicker({
+    Text = "Seeker Color";
+    Alignment = "Left";
+    Default = Color3.fromRGB(255, 80, 80);
+    Callback = function(Value) getgenv().esp_seeker_color = Value; end;
+    Flag = "esp_seeker_color";
+})
+
+local esp_hider_color; esp_hider_color = Sections.EspConfig:CreateColorPicker({
+    Text = "Hider Color";
+    Alignment = "Left";
+    Default = Color3.fromRGB(80, 180, 255);
+    Callback = function(Value) getgenv().esp_hider_color = Value; end;
+    Flag = "esp_hider_color";
+})
+
+local match_log; match_log = Sections.MatchLog:CreateLog({
+    Default = { "Waiting for match data..." };
+    Size = 120;
+    Max = 50;
+});
+getgenv().match_log_ref = match_log;
+
+local crate_dropdown = Sections.Crates:CreateDropdown({
+    Text      = "Crate Type",
+    Subtext   = "",
+    Alignment = "Left",
+    Default   = "Wooden Crate",
+    Choices   = crate_names,
+    Multi     = false, 
+    Flag      = "selected_crate",
+    Callback  = function(Value)
+        getgenv().selected_crate = Value;
+    end,
+})
+
+local auto_open_crate; auto_open_crate = Sections.Crates:CreateToggle({
+    Text = "Auto Open Crates";
+    Subtext = "";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(Value)
+        getgenv().auto_open_crate_enabled = Value;
+
+        if Value then
+            autoOpenCratesLoop();
+        else
+            crate_maid:DoCleaning();
+        end;
+    end;
+    Flag = "auto_open_crate";
+})
+
+local stop_on_knife_dropdown = Sections.Crates:CreateDropdown({
+    Text      = "Select Knife";
+    Subtext   = "";
+    Alignment = "Left";
+    Default   = "None";
+    Choices   = knife_choices;
+    Multi     = false;
+    Flag      = "stop_on_knife_selected";
+    Callback  = function(Value)
+        getgenv().stop_on_knife_selected = Value;
+    end;
+})
+
+local stop_on_drop; stop_on_drop = Sections.Crates:CreateToggle({
+    Text = "Stop On Drop";
+    Subtext = "";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(Value)
+        getgenv().stop_on_drop_enabled = Value;
+    end;
+    Flag = "stop_on_drop";
+})
+
+local auto_collect_coins; auto_collect_coins = Sections.Automatic:CreateToggle({
+    Text = "Auto Collect Coins";
+    Subtext = "";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(Value)
+        getgenv().auto_collect_coins_enabled = Value;
+
+        if Value then
+            autoCollectCoinsLoop();
+        else
+            coins_maid:DoCleaning();
+        end;
+    end;
+    Flag = "auto_collect_coins";
+})
+
+local auto_daily; auto_daily = Sections.Automatic:CreateToggle({
+    Text = "Auto Daily Rewards";
+    Subtext = "";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(Value)
+        getgenv().auto_daily_enabled = Value;
+        if Value then
+            autoDailyLoop();
+        else
+            daily_maid:DoCleaning();
+        end;
+    end;
+    Flag = "auto_daily";
+})
+
+local hide_seeker_radius; hide_seeker_radius = Sections.Hide:CreateSlider({
+    Text = "Seeker Distance";
+    Subtext = "a";
+    Alignment = "Left";
+    Default = 40;
+    Limits = { 10, 100 };
+    Increment = 5;
+    Floats = 0;
+    Callback = function(Value)
+        getgenv().hide_seeker_radius = Value;
+    end;
+    Flag = "hide_seeker_radius";
+})
+
+local hide_flee_delay; hide_flee_delay = Sections.Hide:CreateSlider({
+    Text = "Flee Cooldown";
+    Subtext = "min seconds between teleports";
+    Alignment = "Left";
+    Default = 2;
+    Limits = { 0.2, 5 };
+    Increment = 0.2;
+    Floats = 1;
+    Callback = function(Value)
+        getgenv().hide_flee_cooldown = Value;
+    end;
+    Flag = "hide_flee_delay";
+})
+
+local auto_hide; auto_hide = Sections.Hide:CreateToggle({
+    Text = "Auto Hide";
+    Subtext = "";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(Value)
+        getgenv().auto_hide_enabled = Value;
+
+        if Value then
+            autoHideLoop();
+        else
+            hide_maid:DoCleaning();
+        end;
+    end;
+    Flag = "auto_hide";
+})
+
+local auto_taunt; auto_taunt = Sections.Troll:CreateToggle({
+    Text = "Auto Taunt";
+    Subtext = "plays a random troll sound every 5s";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(Value)
+        getgenv().auto_taunt_enabled = Value;
+
+        if Value then
+            autoTauntLoop();
+        else
+            taunt_maid:DoCleaning();
+        end;
+    end;
+    Flag = "auto_taunt";
+})
+
+local walkspeed_slider; walkspeed_slider = Sections.Movement:CreateSlider({
+    Text = "Value";
+    Subtext = "16";
+    Alignment = "Left";
+    Default = 16;
+    Limits = { 8, 200 };
+    Increment = 1;
+    Floats = 0;
+    Callback = function(Value)
+        getgenv().custom_walkspeed_value = Value;
+        applyMovementStats();
+    end;
+    Flag = "walkspeed_slider";
+})
+
+local walkspeed_toggle; walkspeed_toggle = Sections.Movement:CreateToggle({
+    Text = "Enable Walk Speed";
+    Subtext = "";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(Value)
+        getgenv().custom_walkspeed_enabled = Value;
+
+        if Value then
+            applyMovementStats();
+        else
+            local humanoid = player.character and player.character:FindFirstChildOfClass("Humanoid");
+            if humanoid then
+                humanoid.WalkSpeed = 16;
+            end;
+        end;
+    end;
+    Flag = "walkspeed_toggle";
+})
+
+local killaura_mode_dropdown = Sections.Seeker:CreateDropdown({
+    Text = "Kill Mode";
+    Alignment = "Left";
+    Default = "stab";
+    Choices = { "stab", "throw" };
+    Multi = false;
+    Flag = "killaura_mode";
+    Callback = function(Value)
+        getgenv().killaura_mode = Value;
+    end;
+})
+
+local killaura_radius_slider = Sections.Seeker:CreateSlider({
+    Text = "Radius";
+    Alignment = "Left";
+    Default = 20;
+    Limits = { 5, 1000 };
+    Increment = 100;
+    Floats = 0;
+    Flag = "killaura_radius";
+    Callback = function(Value)
+        getgenv().killaura_radius = Value;
+    end;
+})
+
+local killaura_delay_slider = Sections.Seeker:CreateSlider({
+    Text = "Delay";
+    Subtext = "seconds between hits";
+    Alignment = "Left";
+    Default = 0.1;
+    Limits = { 0.05, 2 };
+    Increment = 0.05;
+    Floats = 2;
+    Flag = "killaura_delay";
+    Callback = function(Value)
+        getgenv().killaura_delay = Value;
+    end;
+})
+
+local killaura_toggle = Sections.Seeker:CreateToggle({
+    Text = "Kill Aura";
+    Subtext = "seeker only";
+    Alignment = "Left";
+    Default = false;
+    Flag = "killaura_enabled";
+    Callback = function(Value)
+        getgenv().killaura_enabled = Value;
+        if Value then
+            killauraLoop();
+        else
+            killaura_maid:DoCleaning();
+        end;
+    end;
+})
+
+Library:Notify("Loaded Lotus for\n".. tostring(getGame()) .. "\nwith Build: ".. tostring("Public"), 7, "Notification");
+Library:Load()
