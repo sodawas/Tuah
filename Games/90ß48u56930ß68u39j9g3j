@@ -1,7 +1,6 @@
 --:: PAINT AND SEEK - DEV ::--
 
 --[[:: TODO: 
-
 ]]
 
 --:: UI ::--
@@ -394,25 +393,39 @@ do --:: Functions
 end;
 
 local crate_names = {};
+local kill_effect_crate_names = {};
+
 local crate_shop_script = client:WaitForChild("PlayerScripts"):WaitForChild("CrateShopNewClient", 10);
 
 if crate_shop_script then
     for i = 1, 100 do
         local ok, name, value = pcall(debug.getupvalue, crate_shop_script, i);
         if not ok then break; end;
-        if type(value) == "table" then
-            local is_crate_table = false;
+        if type(value) == "table" and next(value) then
+            local has_crate_key = false;
+            local all_number = true;
+            local all_string = true;
+
             for k, v in pairs(value) do
-                if type(k) == "string" and k:find("Crate") and type(v) == "number" then
-                    is_crate_table = true;
+                if type(k) == "string" and k:find("Crate") then
+                    has_crate_key = true;
+                else
+                    all_number = false;
+                    all_string = false;
                     break;
                 end;
+                if type(v) ~= "number" then all_number = false; end;
+                if type(v) ~= "string" then all_string = false; end;
             end;
-            if is_crate_table then
+
+            if has_crate_key and all_number and #crate_names == 0 then
                 for crate_name, _ in pairs(value) do
                     table.insert(crate_names, crate_name);
                 end;
-                break;
+            elseif has_crate_key and all_string and #kill_effect_crate_names == 0 then
+                for crate_name, _ in pairs(value) do
+                    table.insert(kill_effect_crate_names, crate_name);
+                end;
             end;
         end;
     end;
@@ -421,8 +434,12 @@ end;
 if #crate_names == 0 then
     crate_names = { "Wooden Crate", "Silver Crate", "Golden Crate", "Brainrot Crate", "Kawaii Kitchen Crate", "Backrooms Crate", "Jurassic Crate" };
 end;
+if #kill_effect_crate_names == 0 then
+    kill_effect_crate_names = { "Novice Crate", "Emotional Crate" };
+end;
 
 table.sort(crate_names);
+table.sort(kill_effect_crate_names);
 
 local crate_maid = maid.new();
 
@@ -435,17 +452,23 @@ local function autoOpenCratesLoop()
 
     task.spawn(function()
         while getgenv().auto_open_crate_enabled do
+            local crate_type = getgenv().selected_crate_type or "knife";
             local crate_name = getgenv().selected_crate or "Wooden Crate";
+            local remote = crate_type == "killeffect" 
+                and gameremotes:WaitForChild("KillEffectCratePurchase") 
+                or crateevent;
 
             if not isUnboxing() then
                 pcall(function()
-                    crateevent:FireServer(crate_name);
+                    remote:FireServer(crate_name);
                 end);
+
                 local timeout = 0;
                 repeat
                     task.wait(0.1);
                     timeout += 0.1;
                 until isUnboxing() or timeout > 5;
+
                 timeout = 0;
                 repeat
                     task.wait(0.1);
@@ -454,6 +477,7 @@ local function autoOpenCratesLoop()
             else
                 task.wait(0.1);
             end;
+
             task.wait(0.3);
         end;
     end);
@@ -463,7 +487,6 @@ local function autoOpenCratesLoop()
         if type(data) ~= "table" or not data.won then return; end;
 
         local won_name = data.won.name;
-        local won_skin_id = data.won.skinId;
 
         if getgenv().match_log_ref then
             getgenv().match_log_ref:AddEntry("📦 Won: " .. tostring(won_name) .. " (" .. tostring(data.won.rarity) .. ")");
@@ -706,7 +729,6 @@ local function autoDailyLoop()
             task.wait(3);
         end;
 
-        --[[ restore ]]--
         daily_utils.CLAIM_INTERVAL = orig_interval;
     end);
 end;
@@ -772,6 +794,92 @@ local function killauraLoop()
             end;
 
             task.wait(0.05);
+        end;
+    end);
+end;
+
+local CODES_LIST = {
+    "5MILVISITS",
+    "THANKYOU5K",
+    "6KTHANKYOU",
+    "7KTHANKYOU",
+};
+
+local redeem_codes_remote = gameremotes:WaitForChild("RedeemCode");
+local redeem_result_remote = gameremotes:WaitForChild("RedeemResult");
+
+local function redeemAllCodes()
+    task.spawn(function()
+        for _, code in ipairs(CODES_LIST) do
+            pcall(function()
+                redeem_codes_remote:FireServer(code);
+            end);
+            task.wait(0.5);
+        end;
+
+        Library:Notify("Finished redeeming all codes!", 5, "Notification");
+    end);
+end;
+
+redeem_result_remote.OnClientEvent:Connect(function(data)
+    if type(data) ~= "table" then return; end;
+
+    if data.ok then
+        Library:Notify("🎁 Code claimed: +" .. tostring(data.amount or 0) .. " coins", 5, "Notification");
+    else
+        local reason = data.reason == "already" and "Already used" or (data.reason == "empty" and "Empty code" or "Invalid code");
+        Library:Notify("❌ Code failed: " .. reason, 5, "Notification");
+    end;
+end);
+
+local obby_maid = maid.new();
+
+local function getObbyTimeRemaining()
+    local pad = workspace:FindFirstChild("LobbyInteractives");
+    if pad then pad = pad:FindFirstChild("ObbyWinnerPad"); end;
+    if not pad then return nil, nil; end;
+
+    local ok, label = pcall(function()
+        return pad.ObbyText.ObbyText.TextLabel;
+    end);
+
+    if not ok or not label then return nil, pad; end;
+
+    local text = label.Text or "";
+    local mins, secs = text:match("(%d+):(%d+)");
+
+    if mins and secs then
+        local total = tonumber(mins) * 60 + tonumber(secs);
+        return total, pad;
+    end;
+
+    return 0, pad;
+end;
+
+local function autoCompleteObbyLoop()
+    obby_maid:DoCleaning();
+
+    task.spawn(function()
+        while getgenv().auto_obby_enabled do
+            local remaining, pad = getObbyTimeRemaining();
+
+            if pad and remaining ~= nil then
+                if remaining <= 0 then
+                    local ok = pcall(function()
+                        player:teleportTo(pad.Position + Vector3.new(0, 3, 0));
+                    end);
+
+                    if ok then
+                        Library:Notify("Won the Obby!", 4, "Notification");
+                    end;
+
+                    task.wait(10); 
+                else
+                    task.wait(math.min(remaining, 15));
+                end;
+            else
+                task.wait(5);
+            end;
         end;
     end);
 end;
@@ -1127,17 +1235,42 @@ local match_log; match_log = Sections.MatchLog:CreateLog({
 });
 getgenv().match_log_ref = match_log;
 
-local crate_dropdown = Sections.Crates:CreateDropdown({
-    Text      = "Crate Type",
-    Subtext   = "",
-    Alignment = "Left",
-    Default   = "Wooden Crate",
-    Choices   = crate_names,
-    Multi     = false, 
-    Flag      = "selected_crate",
+local crate_dropdown;
+
+local crate_type_dropdown = Sections.Crates:CreateDropdown({
+    Text      = "Crate Type";
+    Alignment = "Left";
+    Default   = "Knife";
+    Choices   = { "Knife", "Kill Effect" };
+    Multi     = false;
+    Flag      = "selected_crate_type_display";
+    Callback  = function(Value)
+        if Value == "Kill Effect" then
+            getgenv().selected_crate_type = "killeffect";
+            if crate_dropdown then
+                crate_dropdown:SetOptions(kill_effect_crate_names);
+                crate_dropdown:SetValue(kill_effect_crate_names[1] or "Novice Crate");
+            end;
+        else
+            getgenv().selected_crate_type = "knife";
+            if crate_dropdown then
+                crate_dropdown:SetOptions(crate_names);
+                crate_dropdown:SetValue(crate_names[1] or "Wooden Crate");
+            end;
+        end;
+    end;
+})
+
+crate_dropdown = Sections.Crates:CreateDropdown({
+    Text      = "Select Crate";
+    Alignment = "Left";
+    Default   = crate_names[1] or "Wooden Crate";
+    Choices   = crate_names;
+    Multi     = false;
+    Flag      = "selected_crate";
     Callback  = function(Value)
         getgenv().selected_crate = Value;
-    end,
+    end;
 })
 
 local auto_open_crate; auto_open_crate = Sections.Crates:CreateToggle({
@@ -1363,6 +1496,31 @@ local killaura_toggle = Sections.Seeker:CreateToggle({
         else
             killaura_maid:DoCleaning();
         end;
+    end;
+})
+
+local auto_obby; auto_obby = Sections.Automatic:CreateToggle({
+    Text = "Auto Complete Obby";
+    Subtext = "teleports to obby pad when ready";
+    Alignment = "Left";
+    Default = false;
+    Callback = function(Value)
+        getgenv().auto_obby_enabled = Value;
+
+        if Value then
+            autoCompleteObbyLoop();
+        else
+            obby_maid:DoCleaning();
+        end;
+    end;
+    Flag = "auto_obby";
+})
+
+local redeem_all_codes_button = Sections.Automatic:CreateButton({
+    Text = "Redeem All Codes";
+    Alignment = "Left";
+    Callback = function()
+        redeemAllCodes();
     end;
 })
 
