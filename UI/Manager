@@ -521,67 +521,80 @@ Setup["InputRecorder"] = function(self)
     self:Basics();
 
     Manager.Pressed = {};
-    function Manager:Record(OnUP, Settings)
-        if not Settings then return; end;
-        local Callback = Settings['Callback'];
-        local Valid = Settings['Inputs'];
-        local Type = Settings['Type'];
-        local Break = Settings['Break'];
-        local CancelKeys = Settings['CancelKeys'] or { "Escape", "Backspace" };
-        local IgnoreProc = Settings['IgnoreProc'];
-        local Recorder;
+   function Manager:Record(OnUP, Settings)
+    if not Settings then return; end;
+    local Callback = Settings['Callback'];
+    local Valid = Settings['Inputs'];
+    local Type = Settings['Type'];
+    local Break = Settings['Break'];
+    local CancelKeys = Settings['CancelKeys'] or { "Escape", "Backspace" };
+    local IgnoreProc = Settings['IgnoreProc'];
+    local Recorder;
 
-        if not Callback then return; end;
+    if not Callback then return; end;
 
-        local function OnResponse(Input, isTyping)
-            if (not Input) or (isTyping and not IgnoreProc) then return; end;
+    local function OnResponse(Input, isTyping)
+        print("[DEBUG] OnResponse fired, isTyping:", isTyping, "IgnoreProc:", IgnoreProc);
+        if (not Input) or (isTyping and not IgnoreProc) then 
+            print("[DEBUG] returned early at first check");
+            return; 
+        end;
 
-            local Keycode = Input['KeyCode'];
-            local UserInputType = Input['UserInputType'];
-            if not Keycode then return; end;
-            local KeyName = Keycode.Name;
+        local Keycode = Input['KeyCode'];
+        local UserInputType = Input['UserInputType'];
+        print("[DEBUG] Keycode:", Keycode, "UserInputType:", UserInputType);
+        if not Keycode then 
+            print("[DEBUG] returned early, no keycode");
+            return; 
+        end;
+        local KeyName = Keycode.Name;
 
-            if KeyName == "Unknown" then
-                if Type == "KeyCode" then return; end;
-
-                KeyName = UserInputType.Name;
+        if KeyName == "Unknown" then
+            if Type == "KeyCode" then 
+                print("[DEBUG] returned early, Type is KeyCode");
+                return; 
             end;
+            KeyName = UserInputType.Name;
+        end;
+        print("[DEBUG] Final KeyName:", KeyName, "Valid:", Valid);
 
-            if table.find(CancelKeys, KeyName) then
-                if Recorder then
-                    Recorder:Disconnect();
-                    Callback();
-                    return;
-                end;
+        if table.find(CancelKeys, KeyName) then
+            if Recorder then
+                Recorder:Disconnect();
+                Callback();
+                return;
             end;
+        end;
 
-            if Valid then
-                if table.find(Valid, KeyName) then
-                    Callback(KeyName);
-                else
-                    for i, v in next, (Valid) do
-                        if string.lower(v) == string.lower(KeyName) then
-                            Callback(KeyName);
-                        end;
+        if Valid then
+            if table.find(Valid, KeyName) then
+                print("[DEBUG] Calling Callback (found in Valid)");
+                Callback(KeyName);
+            else
+                for i, v in next, (Valid) do
+                    if string.lower(v) == string.lower(KeyName) then
+                        print("[DEBUG] Calling Callback (lowercase match)");
+                        Callback(KeyName);
                     end;
                 end;
-            else
-                Callback(KeyName);
             end;
-
-            if Break and Recorder then
-                Recorder:Disconnect();
-            end;
-        end;
-
-        if OnUP then
-            Recorder = UserInputService.InputEnded:Connect(OnResponse);
         else
-            Recorder = UserInputService.InputBegan:Connect(OnResponse);
+            Callback(KeyName);
         end;
 
-        return Recorder;
+        if Break and Recorder then
+            Recorder:Disconnect();
+        end;
     end;
+
+    if OnUP then
+        Recorder = UserInputService.InputEnded:Connect(OnResponse);
+    else
+        Recorder = UserInputService.InputBegan:Connect(OnResponse);
+    end;
+
+    return Recorder;
+end;
 
     function Manager:Bind(Key, Callback, OnUP, IgnoreProc)
         if (not Key) or (not Callback) then return; end;
