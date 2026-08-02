@@ -1,5 +1,5 @@
---:: Buried UI
-print("fix.1")
+-- UI Remake
+print("debug1")
 
 local Repo = "https://raw.githubusercontent.com/8T1LiYuMh96vrfvMfqAvlPbi4dR2Hhx8yzE16dG";
 local Setup = loadstring(game:HttpGet(Repo .. "/vVoZlsyDgeOvBT90QbnXoFDQ/main/HsUTSb1JpEQZ"))();
@@ -1146,31 +1146,50 @@ local SubFunctions; SubFunctions = {
             end;
         end;
 
-        local function Start()
+       local function Start()
             isSliding = true;
 
-            while isSliding do
-                local absPX, absSX = Slider_Back.AbsolutePosition.X, Slider_Back.AbsoluteSize.X;
-                local x = Mouse.X;
+            task.spawn(function()
+                while isSliding do
+                    local absPX, absSX = Slider_Back.AbsolutePosition.X, Slider_Back.AbsoluteSize.X;
+                    local x = Mouse.X;
 
-                local Percent = (x - absPX) / absSX;
-                Percent = math.clamp(Percent, 0, 1);
-                local Value = ((nself.Limits[2] - nself.Limits[1]) * Percent) + nself.Limits[1];
+                    local Percent = (x - absPX) / absSX;
+                    Percent = math.clamp(Percent, 0, 1);
+                    local Value = ((nself.Limits[2] - nself.Limits[1]) * Percent) + nself.Limits[1];
 
-                local increment = tonumber(nself.Increment) or 1
-                Value = math.floor((Value / increment) + 0.5) * increment
+                    local increment = tonumber(nself.Increment) or 1
+                    Value = math.floor((Value / increment) + 0.5) * increment
 
-                nself.Value = Value;
-                Update();
+                    nself.Value = Value;
+                    Update();
 
-                RunService.Heartbeat:Wait();
-            end
+                    RunService.Heartbeat:Wait();
+                end
+            end);
         end;
 
         local function End()
-            print("End() called, stopping drag");
             isSliding = false;
         end;
+
+        local input_began_conn, input_ended_conn;
+        input_began_conn = UserInputService.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                local mouse_pos = UserInputService:GetMouseLocation();
+                local abs_pos, abs_size = Slider_Back.AbsolutePosition, Slider_Back.AbsoluteSize;
+                if mouse_pos.X >= abs_pos.X and mouse_pos.X <= abs_pos.X + abs_size.X
+                    and mouse_pos.Y >= abs_pos.Y - 10 and mouse_pos.Y <= abs_pos.Y + abs_size.Y + 10 then
+                    Start();
+                end;
+            end;
+        end);
+
+        input_ended_conn = UserInputService.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                End();
+            end;
+        end);
 
         function nself:SetValue(nv)
             nself.Value = nv or -math.huge;
@@ -1216,7 +1235,7 @@ local SubFunctions; SubFunctions = {
         local Click = Library:ApplyClick(Slider_Back);
         Click.ZIndex = ParentUI.ZIndex + 1;
 
-        Connections[1] = Click.MouseButton1Down:Connect(Start);
+        Connections[1] = input_began_conn;
         Connections[2] = Click.MouseButton2Up:Connect(function()
             if SubUI then
                 SubUI.Visibility(true);
@@ -1224,7 +1243,7 @@ local SubFunctions; SubFunctions = {
             end;
         end);
 
-        Connections[3] = InputService:Bind("MouseButton1", End, true, true);
+        Connections[3] = input_ended_conn;
 
         local oldDestroy = self.Destroy;
         self.Destroy = function()
