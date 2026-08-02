@@ -1,5 +1,5 @@
 -- UI Remake
-print("debug1")
+print("debug2")
 
 local Repo = "https://raw.githubusercontent.com/8T1LiYuMh96vrfvMfqAvlPbi4dR2Hhx8yzE16dG";
 local Setup = loadstring(game:HttpGet(Repo .. "/vVoZlsyDgeOvBT90QbnXoFDQ/main/HsUTSb1JpEQZ"))();
@@ -1173,18 +1173,7 @@ local SubFunctions; SubFunctions = {
             isSliding = false;
         end;
 
-        local input_began_conn, input_ended_conn;
-        input_began_conn = UserInputService.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                local mouse_pos = UserInputService:GetMouseLocation();
-                local abs_pos, abs_size = Slider_Back.AbsolutePosition, Slider_Back.AbsoluteSize;
-                if mouse_pos.X >= abs_pos.X and mouse_pos.X <= abs_pos.X + abs_size.X
-                    and mouse_pos.Y >= abs_pos.Y - 10 and mouse_pos.Y <= abs_pos.Y + abs_size.Y + 10 then
-                    Start();
-                end;
-            end;
-        end);
-
+        local input_ended_conn;
         input_ended_conn = UserInputService.InputEnded:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 then
                 End();
@@ -1235,7 +1224,7 @@ local SubFunctions; SubFunctions = {
         local Click = Library:ApplyClick(Slider_Back);
         Click.ZIndex = ParentUI.ZIndex + 1;
 
-        Connections[1] = input_began_conn;
+        Connections[1] = Click.MouseButton1Down:Connect(Start);
         Connections[2] = Click.MouseButton2Up:Connect(function()
             if SubUI then
                 SubUI.Visibility(true);
