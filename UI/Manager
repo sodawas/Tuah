@@ -638,36 +638,117 @@ Setup["Hooking"] = function(self)
     if Called["Hooking"] then return Called["Hooking"]; end;
     Called["Hooking"] = Manager;
 
-    local Hooks = {};
-    local function AttemptHook(Instance, Method, ...)
-        local Hook = Hooks[Instance];
-        if Hook and Hook[1] == Method then
-            return Hook[2](...) or nil;
+    local State = getgenv().__HookState or { Rules = {}, Functions = {}, Installed = {} };
+    getgenv().__HookState = State;
+    local Rules, Functions = State.Rules, State.Functions;
+
+    local function Blocked(Instance, Method, ...)
+        local List = Rules[Instance];
+        if not List then return false; end;
+
+        for _, Rule in pairs(List) do
+            if Rule.Method == Method then
+                local ok, result = pcall(Rule.Callback, ...);
+                if ok and result == 0 then return true; end;
+            end;
         end;
+        return false;
     end;
 
-    function Manager.Add(Instance, Method, Response)
-        if Hooks[Instance] then return; end;
-        return pcall(function() Hooks[Instance] = {Method, Response} end);
+    if not State.Installed.Namecall then
+        State.Installed.Namecall = true;
+
+        local old;
+        old = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
+            local Method = getnamecallmethod();   -- immer zuerst lesen
+            if Rules[self] and not checkcaller() and Blocked(self, Method, ...) then return; end;
+
+            if setnamecallmethod then setnamecallmethod(Method); end;
+            return old(self, ...);
+        end));
     end;
 
-    function Manager.Remove(Instance)
-        return pcall(function() Hooks[Instance] = nil; end);
+    local function HookDirect(Method, Class)
+        local Key = "Direct_" .. Method;
+        if State.Installed[Key] ~= nil then return; end;
+
+        local Holder = Instance.new(Class);
+        local Func = Holder[Method];
+        Holder:Destroy();
+
+        State.Installed[Key] = pcall(function()
+            local old;
+            old = hookfunction(Func, newcclosure(function(self, ...)
+                if Rules[self] and not checkcaller() and Blocked(self, Method, ...) then return; end;
+                return old(self, ...);
+            end));
+        end);
     end;
 
-    function Manager.Exists(Instance)
-        return Hooks[Instance] ~= nil;
+    function Manager.Add(Instance, Method, Callback, Id)
+        if not (Instance and Method and Callback) then return false; end;
+
+        Rules[Instance] = Rules[Instance] or {};
+        Rules[Instance][Id or Method] = { Method = Method, Callback = Callback };
+
+        if Method == "FireServer" then HookDirect("FireServer", "RemoteEvent");
+        elseif Method == "InvokeServer" then HookDirect("InvokeServer", "RemoteFunction"); end;
+        return true;
     end;
 
-    local old;
-    old = hookmetamethod(game, "__namecall", function(self, ...)
-        if not checkcaller() then
-            local Response = AttemptHook(self, getnamecallmethod(), ...); -- 0 = Return, 
-            if Response == 0 then return; end;
+    function Manager.Remove(Instance, Id)
+        if not Rules[Instance] then return false; end;
+        if Id then Rules[Instance][Id] = nil; else Rules[Instance] = nil; end;
+        return true;
+    end;
+
+    function Manager.Exists(Instance, Id)
+        local List = Rules[Instance];
+        if not List then return false; end;
+        if Id then return List[Id] ~= nil; end;
+        return next(List) ~= nil;
+    end;
+
+    function Manager.Function(Func, Callback, Id)
+        if typeof(Func) ~= "function" or not Callback then return; end;
+        Id = Id or Func;
+
+        local Handle = Functions[Id];
+        if Handle and Handle.Func == Func then 
+            Handle.Callback, Handle.Enabled = Callback, true;
+            return Handle;
+        end;
+        if Handle then Handle.Enabled = false; end;  
+
+        Handle = { Func = Func, Callback = Callback, Enabled = true };
+        local old;
+
+        local function Wrapper(...)
+            if Handle.Enabled and not checkcaller() then
+                local r = table.pack(pcall(Handle.Callback, old, ...));
+                if r[1] then return unpack(r, 2, r.n); end;
+                warn("[Hooking]", tostring(Id), r[2]);
+            end;
+            return old(...);
         end;
 
-        return old(self, ...);
-    end);
+        old = hookfunction(Func, islclosure(Func) and Wrapper or newcclosure(Wrapper));
+        Handle.Old = old;
+
+        function Handle:Enable() self.Enabled = true; end;
+        function Handle:Disable() self.Enabled = false; end;
+        function Handle:Remove()
+            self.Enabled = false;
+            if pcall(restorefunction, self.Func) then Functions[Id] = nil; end;
+        end;
+
+        Functions[Id] = Handle;
+        return Handle;
+    end;
+
+    function Manager.Get(Id)
+        return Functions[Id];
+    end;
 
     return Manager;
 end;
